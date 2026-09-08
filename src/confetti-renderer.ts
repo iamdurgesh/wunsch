@@ -30,6 +30,7 @@ const COLORS: readonly Color[] = [
   [190, 146, 221],
 ];
 const DURATION = 20;
+const FALL_SPEED = 1.8;
 const FOCAL_LENGTH = 1000;
 const random = (min: number, max: number) => min + Math.random() * (max - min);
 
@@ -71,7 +72,7 @@ export function startConfetti(
       y: random(-height * 0.55, -25),
       z: random(-130, 480),
       vx: random(-90, 90),
-      vy: random(65, 180),
+      vy: random(65, 180) * FALL_SPEED,
       width: ribbon ? random(4, 7) : random(8, 15),
       height: ribbon ? random(21, 34) : random(10, 19),
       rx: random(0, Math.PI * 2),
@@ -177,7 +178,7 @@ export function startConfetti(
       const scale = FOCAL_LENGTH / (FOCAL_LENGTH + particle.z);
       const flutter = Math.sin(age * particle.flutter + particle.phase);
       // Gravity, air resistance and flutter give each piece a different trajectory.
-      particle.vy += (320 - particle.vy * 1.4) * delta;
+      particle.vy += (320 * FALL_SPEED - particle.vy * 1.4) * delta;
       particle.vx *= Math.exp(-0.5 * delta);
       particle.x += (particle.vx + flutter * 38) * delta * scale;
       particle.y += particle.vy * delta * scale;

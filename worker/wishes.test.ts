@@ -51,6 +51,20 @@ function request(
 }
 
 describe("private wish submission", () => {
+  it("saves without an invitation, deduplicates retries, and isolates browser submissions", async () => {
+    const submit = (key: string) => {
+      const incoming = request(undefined, { "X-Submission-Key": key });
+      incoming.headers.delete("X-Invite-Token");
+      return handleWishes(incoming, { DB });
+    };
+    expect((await submit("c".repeat(64))).status).toBe(200);
+    expect((await submit("c".repeat(64))).status).toBe(200);
+    expect(sqlite.prepare("SELECT * FROM wishes").all()).toHaveLength(1);
+    expect((await submit("d".repeat(64))).status).toBe(200);
+    expect(sqlite.prepare("SELECT * FROM wishes").all()).toHaveLength(2);
+    expect((await submit("invalid")).status).toBe(400);
+    expect(sqlite.prepare("SELECT * FROM wishes").all()).toHaveLength(2);
+  });
   it("stores both gift preferences and the gift-value answer", async () => {
     const selected = {
       ...answers,

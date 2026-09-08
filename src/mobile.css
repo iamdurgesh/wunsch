@@ -1,4 +1,13 @@
 /* Phone refinements, loaded after the stationery theme. */
+@media (max-width: 700px) {
+  /* Keep the paper layers inside the viewport even for long summaries. */
+  .card-stack::before {
+    transform: translate(-3px, 3px);
+  }
+  .card-stack::after {
+    transform: translate(2px, 1px);
+  }
+}
 .submission-area {
   margin: 20px 0 15px;
 }

@@ -1,4 +1,3 @@
-import { readFileSync, existsSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 import { questions } from "../src/questions";
 
@@ -10,16 +9,7 @@ test("local Cloudflare saves wishes and acknowledges receipt on mobile", async (
     process.env.TEST_LOCAL_API !== "1",
     "Run with TEST_LOCAL_API=1 and npm run dev:full",
   );
-  test.skip(!existsSync(".dev.vars"), "Requires local invitation secret");
-  const token = readFileSync(".dev.vars", "utf8").match(
-    /^INVITE_TOKEN=([a-f0-9]{64})$/m,
-  )?.[1];
-  expect(Boolean(token)).toBe(true);
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.addInitScript(
-    (invite) => sessionStorage.setItem("inge-wishes-invite", invite!),
-    token,
-  );
   await page.goto("http://127.0.0.1:8788/");
   await page.getByRole("button", { name: "Na dann, los geht’s" }).click();
   await page.getByRole("button", { name: "Ich bin bereit" }).click();
@@ -41,7 +31,7 @@ test("local Cloudflare saves wishes and acknowledges receipt on mobile", async (
     .getByRole("textbox", { name: /Herzenswunsch/ })
     .fill("LOCAL TEST: Ein gemeinsamer Ausflug.");
   await page
-    .getByRole("button", { name: "Wünsche senden", exact: true })
+    .getByRole("button", { name: "Ab die Post, Wunschzettel!", exact: true })
     .click();
   await expect(
     page.getByRole("button", { name: "Wünsche sind angekommen" }),
@@ -49,7 +39,7 @@ test("local Cloudflare saves wishes and acknowledges receipt on mobile", async (
   await page
     .getByRole("textbox", { name: /Herzenswunsch/ })
     .fill("LOCAL TEST: Aktualisierter Wunsch.");
-  await page.getByRole("button", { name: "Änderungen senden" }).click();
+  await page.getByRole("button", { name: "Nachschlag für die Geschenkabteilung!" }).click();
   await expect(
     page.getByRole("button", { name: "Wünsche sind angekommen" }),
   ).toBeDisabled();
