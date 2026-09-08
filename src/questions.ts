@@ -11,12 +11,15 @@ export type Question = {
   title: string;
   description: string;
   options: readonly Option[];
+  additionalChoiceWith?: string;
   aside: { emoji: string; headline: string; caption: string };
   reaction?: {
     optionId: string;
     emoji: string;
     headline: string;
     caption: string;
+    large?: boolean;
+    screenEmoji?: string;
   };
   // Optional local meme: put the image in public/memes/ and set its path here.
   meme?: { src: string; alt: string; caption: string };
@@ -188,10 +191,11 @@ export const questions: readonly Question[] = [
   },
   {
     id: "gift-style",
+    additionalChoiceWith: "together",
     category: "Fast ausgepackt",
     title: "Und was macht ein Geschenk besonders?",
     description:
-      "Die letzte kleine Spur auf dem Weg zum richtigen Geburtstagswunsch.",
+      "Eine kleine Spur auf dem Weg zum richtigen Geburtstagswunsch. Bei gemeinsamer Zeit darf noch eine zweite Antwort dazu.",
     options: [
       {
         id: "useful",
@@ -212,10 +216,54 @@ export const questions: readonly Question[] = [
         description: "Ein bisschen weiß ich es selbst noch nicht.",
       },
     ],
+    reaction: {
+      optionId: "together",
+      emoji: "🤗",
+      headline: "Ja, ich wusste, dass Sie das wählen würden!",
+      caption: "Jetzt dürfen Sie noch eine weitere Option auswählen.",
+      large: true,
+      screenEmoji: "🤗",
+    },
     aside: {
       emoji: "🐣",
       headline: "Ich brauche wirklich nichts.",
       caption: "… aber auspacken würde ich schon.",
+    },
+  },
+  {
+    id: "gift-value",
+    category: "Herz oder Preisschild",
+    title: "Darf’s etwas mehr sein – oder bekommt das Preisschild Hausverbot?",
+    description:
+      "Mal ehrlich: Würden Sie sich auch mit einem teureren Geschenk wohlfühlen? Darf ich da etwas großzügiger sein, oder zählt für Sie vor allem der Gedanke dahinter? Ganz ohne Geschenk-Verhör, versprochen.",
+    options: [
+      {
+        id: "comfortable",
+        emoji: "🎁",
+        label: "Ja, das darf auch mal etwas teurer sein.",
+        description:
+          "Wenn es zu mir passt und für Sie im Rahmen bleibt, freue ich mich darüber.",
+      },
+      {
+        id: "modest",
+        emoji: "😅",
+        label: "Lieber etwas Kleines – sonst werde ich verlegen.",
+        description:
+          "Mit einem teuren Geschenk würde ich mich eher unwohl fühlen. Bitte bescheiden bleiben.",
+      },
+      {
+        id: "intention",
+        emoji: "💛",
+        label: "Der Gedanke zählt. Das Preisschild darf draußen warten.",
+        description:
+          "Bitte nichts Teures nur um des Schenkens willen – etwas Persönliches macht mir Freude.",
+      },
+    ],
+    aside: {
+      emoji: "🏷️",
+      headline: "Das Preisschild ist nicht eingeladen.",
+      caption:
+        "Es erzählt sowieso immer nur von sich. Der Gedanke dahinter ist viel sympathischer.",
     },
   },
   {
@@ -244,6 +292,13 @@ export const questions: readonly Question[] = [
         description: "Ich hätte lieber mehr Zeit für die schönen Dinge.",
       },
     ],
+    reaction: {
+      optionId: "fed-up",
+      emoji: "😮‍💨",
+      headline: "Da kann ich Ihnen nur zustimmen!",
+      caption: "Lieber mehr Zeit für die schönen Dinge im Leben.",
+      large: true,
+    },
     aside: {
       emoji: "🧹",
       headline: "Gerade erst geputzt.",
@@ -252,11 +307,36 @@ export const questions: readonly Question[] = [
   },
 ];
 
-export type Answers = Record<string, string>;
+export type Answer = string | string[];
+export type Answers = Record<string, Answer>;
+
+export function answerIncludes(answer: Answer | undefined, optionId: string) {
+  return Array.isArray(answer)
+    ? answer.includes(optionId)
+    : answer === optionId;
+}
+
+export function selectAnswer(
+  question: Question,
+  answer: Answer | undefined,
+  optionId: string,
+): Answer {
+  if (!question.additionalChoiceWith) return optionId;
+  const selected = Array.isArray(answer) ? answer : answer ? [answer] : [];
+  if (selected.includes(optionId))
+    return selected.filter((id) => id !== optionId);
+  const anchor = question.additionalChoiceWith;
+  if (optionId === anchor) return [anchor, ...selected.slice(0, 1)];
+  return selected.includes(anchor) ? [anchor, optionId] : optionId;
+}
 
 // Changes to IDs or available choices invalidate old drafts and submissions.
 export const questionnaireVersion = JSON.stringify(
-  questions.map(({ id, options }) => [id, options.map((option) => option.id)]),
+  questions.map(({ id, options, additionalChoiceWith }) => [
+    id,
+    options.map((option) => option.id),
+    additionalChoiceWith,
+  ]),
 );
 
 export function isValidAnswers(
@@ -271,19 +351,38 @@ export function isValidAnswers(
       questions.some(
         (question) =>
           question.id === id &&
-          question.options.some((option) => option.id === answer),
+          (typeof answer === "string"
+            ? question.options.some((option) => option.id === answer)
+            : Array.isArray(answer) &&
+              !!question.additionalChoiceWith &&
+              answer.length >= (complete ? 1 : 0) &&
+              answer.length <= 2 &&
+              new Set(answer).size === answer.length &&
+              (answer.length < 2 ||
+                answer.includes(question.additionalChoiceWith)) &&
+              answer.every((id) =>
+                question.options.some((option) => option.id === id),
+              )),
       ),
     )
   );
 }
 
 export function getAnswerRows(answers: Answers) {
-  return questions.map((question) => ({
-    question,
-    option: question.options.find(
-      (option) => option.id === answers[question.id],
-    ),
-  }));
+  return questions.map((question) => {
+    const selected = question.options.filter((option) =>
+      answerIncludes(answers[question.id], option.id),
+    );
+    return {
+      question,
+      option: selected.length
+        ? {
+            ...selected[0],
+            label: selected.map((option) => option.label).join(" + "),
+          }
+        : undefined,
+    };
+  });
 }
 
 export function buildSummary(answers: Answers, note: string): string {

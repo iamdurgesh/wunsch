@@ -10,7 +10,13 @@ import {
   RotateCcw,
   Sparkles,
 } from "lucide-react";
-import { getAnswerRows, questions, type Answers } from "./questions";
+import {
+  answerIncludes,
+  selectAnswer,
+  getAnswerRows,
+  questions,
+  type Answers,
+} from "./questions";
 import { readDraft, readInvite, rememberInvite, saveDraft } from "./draft";
 import { SubmitWishes } from "./SubmitWishes";
 import { Confetti } from "./Confetti";
@@ -100,7 +106,7 @@ function App() {
     <div className="app-shell">
       {isQuestion && (
         <SelectionReaction
-          key={`${question.id}-${answers[question.id]}`}
+          key={`${question.id}-${question.reaction ? answerIncludes(answers[question.id], question.reaction.optionId) : false}`}
           reaction={question.reaction}
           answer={answers[question.id]}
         />
@@ -289,18 +295,29 @@ function App() {
                       <legend className="sr-only">{question.title}</legend>
                       {question.options.map((option) => (
                         <label
-                          className={`answer-option ${answers[question.id] === option.id ? "selected" : ""}`}
+                          className={`answer-option ${answerIncludes(answers[question.id], option.id) ? "selected" : ""}`}
                           key={option.id}
                         >
                           <input
-                            type="radio"
+                            type={
+                              question.additionalChoiceWith
+                                ? "checkbox"
+                                : "radio"
+                            }
                             name={question.id}
                             value={option.id}
-                            checked={answers[question.id] === option.id}
+                            checked={answerIncludes(
+                              answers[question.id],
+                              option.id,
+                            )}
                             onChange={() =>
                               setAnswers((previous) => ({
                                 ...previous,
-                                [question.id]: option.id,
+                                [question.id]: selectAnswer(
+                                  question,
+                                  previous[question.id],
+                                  option.id,
+                                ),
                               }))
                             }
                           />
@@ -320,9 +337,10 @@ function App() {
                             <span>{option.description}</span>
                           </span>
                           <span className="radio-indicator" aria-hidden="true">
-                            {answers[question.id] === option.id && (
-                              <Check size={12} />
-                            )}
+                            {answerIncludes(
+                              answers[question.id],
+                              option.id,
+                            ) && <Check size={12} />}
                           </span>
                         </label>
                       ))}
@@ -330,7 +348,7 @@ function App() {
                     <div className="question-actions">
                       <button
                         className="primary-button"
-                        disabled={!answers[question.id]}
+                        disabled={!answers[question.id]?.length}
                         onClick={nextQuestion}
                       >
                         {questionIndex === questions.length - 1
