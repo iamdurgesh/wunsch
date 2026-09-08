@@ -1,5 +1,5 @@
-import type { D1Database, PagesFunction } from '@cloudflare/workers-types';
-import { buildSummary, isValidAnswers, questionnaireVersion } from '../../src/questions';
+import type { D1Database } from '@cloudflare/workers-types';
+import { buildSummary, isValidAnswers, questionnaireVersion } from '../src/questions';
 
 export type Env = { DB?: D1Database; INVITE_TOKEN?: string };
 const headers = { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer' };
@@ -57,8 +57,3 @@ export async function handleWishes(request: Request, env: Env): Promise<Response
     return json({ saved: true });
   } catch { return json({ error: 'Storage unavailable' }, 503); }
 }
-
-export const onRequest: PagesFunction<Env> = async ({ request, env }) => {
-  // Cloudflare and DOM Request/Response types differ; both use the Fetch API here.
-  return await handleWishes(request as unknown as Request, env) as unknown as Awaited<ReturnType<PagesFunction<Env>>>;
-};

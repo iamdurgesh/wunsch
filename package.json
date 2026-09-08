@@ -13,7 +13,9 @@
     "test": "vitest run",
     "test:mobile": "playwright test",
     "test:api:local": "TEST_LOCAL_API=1 playwright test e2e/submission.pw.ts",
-    "dev:full": "npm run build && wrangler pages dev dist --port 8788",
+    "dev:full": "npm run build && wrangler dev --port 8788",
+    "deploy": "npm run build && wrangler deploy",
+    "deploy:check": "npm run build && wrangler deploy --dry-run",
     "db:migrate:local": "wrangler d1 migrations apply inge-wishes --local",
     "db:results:local": "wrangler d1 execute inge-wishes --local --command 'SELECT summary, updated_at FROM wishes ORDER BY updated_at DESC'"
   },

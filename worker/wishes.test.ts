@@ -3,7 +3,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { D1Database } from '@cloudflare/workers-types';
 import { handleWishes } from './wishes';
-import { questionnaireVersion, questions } from '../../src/questions';
+import { questionnaireVersion, questions } from '../src/questions';
 
 const token = 'a'.repeat(64);
 const answers = Object.fromEntries(questions.map((question) => [question.id, question.options[0].id]));
@@ -12,7 +12,7 @@ let DB: D1Database;
 
 beforeEach(() => {
   sqlite = new DatabaseSync(':memory:');
-  sqlite.exec(readFileSync(new URL('../../migrations/0001_wishes.sql', import.meta.url), 'utf8'));
+  sqlite.exec(readFileSync(new URL('../migrations/0001_wishes.sql', import.meta.url), 'utf8'));
   DB = { prepare: (sql: string) => ({ bind: (...values: string[]) => ({ run: async () => sqlite.prepare(sql).run(...values) }) }) } as unknown as D1Database;
 });
 afterEach(() => sqlite.close());
