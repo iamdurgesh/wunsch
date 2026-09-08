@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "frau-inge-wuensche",
+  "name": "wunsch",
   "main": "worker/index.ts",
   "assets": {
     "directory": "./dist",
@@ -13,9 +13,7 @@
     {
       "binding": "DB",
       "database_name": "inge-wishes",
-      // Replace with the real EU-jurisdiction D1 ID before deployment.
-      "database_id": "local-only-replace-before-deploy",
-      "preview_database_id": "inge-wishes-local",
+      "database_id": "78d1b51a-0eed-4a9d-8922-a170bd84c768",
       "migrations_dir": "migrations",
     },
   ],

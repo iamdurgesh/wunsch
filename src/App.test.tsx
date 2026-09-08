@@ -5,8 +5,12 @@ import userEvent from '@testing-library/user-event';
 import App from './App';
 import { questions } from './questions';
 
-beforeEach(() => sessionStorage.clear());
-afterEach(() => { cleanup(); vi.restoreAllMocks(); });
+beforeEach(() => {
+  sessionStorage.clear();
+  // DOM-only tests use reduced motion; the real renderer is checked in Chrome.
+  vi.stubGlobal('matchMedia', () => ({ matches: true }));
+});
+afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 describe('birthday questionnaire', () => {
   it('requires a choice, retains edited answers, and confirms before restarting', async () => {
