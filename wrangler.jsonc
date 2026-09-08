@@ -1,14 +1,22 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "frau-inge-wuensche",
-  "pages_build_output_dir": "./dist",
+  "main": "worker/index.ts",
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api", "/api/*"],
+  },
   "compatibility_date": "2026-09-01",
-  "d1_databases": [{
-    "binding": "DB",
-    "database_name": "inge-wishes",
-    // Replace with the real EU-jurisdiction D1 ID before deployment.
-    "database_id": "local-only-replace-before-deploy",
-    "preview_database_id": "inge-wishes-local",
-    "migrations_dir": "migrations"
-  }]
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "inge-wishes",
+      // Replace with the real EU-jurisdiction D1 ID before deployment.
+      "database_id": "local-only-replace-before-deploy",
+      "preview_database_id": "inge-wishes-local",
+      "migrations_dir": "migrations",
+    },
+  ],
 }

@@ -15,5 +15,5 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true
   },
-  "include": ["src", "functions", "vite.config.ts", "playwright.config.ts", "e2e"]
+  "include": ["src", "worker", "vite.config.ts", "playwright.config.ts", "e2e"]
 }

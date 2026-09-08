@@ -1,6 +1,6 @@
 # Für Frau Inge · Eine kleine Geburtstagsmission
 
-A German-language birthday questionnaire built with **React, TypeScript and Vite**, with a small **Cloudflare Pages Function + D1** backend for receiving wishes. Warm stationery styling, animated cards, locally bundled fonts and CSS gift artwork.
+A German-language birthday questionnaire built with **React, TypeScript and Vite**, with a small **Cloudflare Worker + D1** backend for receiving wishes. Warm stationery styling, animated cards, locally bundled fonts and CSS gift artwork.
 
 ## Run locally
 
@@ -18,6 +18,7 @@ npm test        # Question configuration and summary checks
 npm run build  # Strict TypeScript check and production build
 npm run preview
 npm run test:mobile # Six browser viewport checks (requires Google Chrome)
+npm run deploy:check # Bundle the Worker without uploading or deploying
 ```
 
 `npm run dev` previews the frontend. Use the full local setup below to test sending wishes.
@@ -84,32 +85,36 @@ Images and fonts are served locally. The production Content Security Policy perm
 - `src/mobile.css`: readable phone typography, larger tap targets, compact meme panels and safe-area spacing.
 - `src/draft.ts`: validated, versioned tab-session drafts; no localStorage.
 - `src/SubmitWishes.tsx`: explicit submission, retry, and confirmed-save states.
-- `functions/api/wishes.ts`: write-only endpoint, invitation validation and prepared database statements.
+- `worker/index.ts`: Worker entry point; routes API requests and serves frontend assets.
+- `worker/wishes.ts`: write-only endpoint, invitation validation and prepared database statements.
 - `migrations/0001_wishes.sql`: one result per invitation, with a readable summary.
-- `public/_headers`: security headers for Cloudflare Pages.
+- `public/_headers`: security headers for Cloudflare static assets.
 
 Native radio inputs provide keyboard navigation. Navigation moves focus to the new heading and scrolls back to the card. Answers, notes, current step and confirmed-save status survive reloads in the same browser tab through sessionStorage. Drafts older than 24 hours are discarded on the next load. The questionnaire still works in memory if storage is blocked. Browsers may restore session storage when restoring closed tabs; this is not a guaranteed secure-erasure mechanism.
 
 Answers are sent only after pressing **Wünsche senden**. Success appears only after the API acknowledges a database write. Retries and later edits replace the same invitation’s result; they do not create duplicate rows. The app stores a snapshot of the readable summary so it remains meaningful if question wording changes later. The final screen uses direct submission only; without an invitation, it explains how to request the personal link.
 
-## Host on Cloudflare Pages later
+## Deploy with Cloudflare Workers Builds
 
 | Setting | Value |
 | --- | --- |
-| Framework preset | React (Vite) |
 | Build command | `npm run build` |
-| Build output directory | `dist` |
+| Deploy command | `npx wrangler deploy` |
+| Root directory | Repository root |
 | Node version | `22` |
 
-Connect the repository in Cloudflare Pages with these settings. The root `functions/` directory is part of the deployment; uploading only `dist` through the dashboard will not deploy this backend. For CLI deployment use `npx wrangler pages deploy dist` from the project root.
+Connect the repository to your existing Cloudflare Worker with these settings. `wrangler.jsonc` specifies both `worker/index.ts` and the built frontend in `dist`. API routes run through the Worker before static assets; other requests use Cloudflare’s asset serving. The Worker `name` in `wrangler.jsonc` must match the project name in the Cloudflare dashboard.
+
+The project was initially configured for Pages. A Workers Build running `npx wrangler deploy` against `pages_build_output_dir` fails with **Missing entry-point to Worker script or to assets directory**. The configuration now targets Workers directly. Deploying only `dist` as static assets would omit the answer-saving API.
 
 Before deploying:
 
 1. Create a D1 database with an EU jurisdiction: `npx wrangler d1 create inge-wishes --jurisdiction=eu`.
-2. Put its real database ID in `wrangler.jsonc`. Keep the `DB` binding name. Use a separate database and invitation token for any shared preview environment.
+2. Put its real database name and ID in `wrangler.jsonc`. Keep the `DB` binding name. Use a separate database and invitation token for any shared preview environment. The existing placeholder ID cannot be used for a remote deployment.
 3. Apply the production migration: `npx wrangler d1 migrations apply inge-wishes --remote`.
-4. Generate a fresh 64-character hex token and add it as the **INVITE_TOKEN** runtime secret in the Pages project. Do not reuse a test token or commit it to Git.
-5. Deploy, then send Frau Inge `https://YOUR_SITE/#invite=YOUR_PRODUCTION_TOKEN` privately.
+4. Generate a fresh 64-character hex token and add it as the **INVITE_TOKEN** runtime secret under the Worker’s Settings → Variables and Secrets. Do not reuse a test token, put it in build-time variables, or commit it to Git.
+5. Push the configuration to the connected repository and trigger the build, or run `npm run deploy` locally after `npx wrangler login`.
+6. Send Frau Inge `https://YOUR_WORKER.YOUR_SUBDOMAIN.workers.dev/#invite=YOUR_PRODUCTION_TOKEN` privately, or use your configured custom domain.
 
 No remote database has been created or connected by this implementation, and no deployment has been performed.
 
@@ -125,8 +130,8 @@ Only your authenticated Cloudflare account has this read path; the app provides 
 
 After the birthday, remove the invitation secret to stop submissions. Delete stored wishes when no longer needed, or when requested, through the D1 console. For example, inspect and then delete a specific row using its `invitation_id`. Database backups and provider logs have their own retention settings; this implementation does not schedule automatic deletion.
 
-[Official Cloudflare guide](https://developers.cloudflare.com/pages/framework-guides/deploy-a-react-site/)
-[D1 bindings](https://developers.cloudflare.com/pages/functions/bindings/) · [D1 EU jurisdiction](https://developers.cloudflare.com/d1/configuration/data-location/)
+[Workers Builds configuration](https://developers.cloudflare.com/workers/ci-cd/builds/configuration/)
+[Migration from Pages](https://developers.cloudflare.com/workers/static-assets/migration-guides/migrate-from-pages/) · [D1 EU jurisdiction](https://developers.cloudflare.com/d1/configuration/data-location/)
 
 ## Data handling
 
