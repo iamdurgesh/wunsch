@@ -1,0 +1,128 @@
+.selection-reaction-region {
+  position: fixed;
+  top: max(12px, env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(440px, calc(100% - 24px));
+  z-index: 1100;
+  pointer-events: none;
+}
+.selection-reaction {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 20px;
+  border: 1px solid #c9a36b;
+  border-radius: 20px;
+  background: #fff0d5;
+  color: #314838;
+  box-shadow: 0 12px 36px #392f2526;
+  animation: reaction-arrive 350ms ease-out;
+}
+.reaction-emoji {
+  font-size: 36px;
+}
+.reaction-large {
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+.reaction-large .selection-reaction {
+  position: relative;
+  flex-direction: column;
+  padding: 28px 24px;
+  text-align: center;
+  max-height: calc(100dvh - 24px);
+  overflow-y: auto;
+  pointer-events: auto;
+}
+.reaction-large .reaction-emoji {
+  font-size: clamp(80px, 20vw, 120px);
+  line-height: 1.2;
+}
+.reaction-large .reaction-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+}
+.reaction-screen-effect {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 1090;
+}
+.reaction-screen-effect span {
+  position: absolute;
+  left: calc((var(--column) + 0.5) * 100% / 6);
+  top: calc((var(--row) + 0.5) * 100% / 4);
+  font-size: clamp(44px, 9vw, 110px);
+  opacity: 0;
+  animation: hug-echo 3600ms var(--delay) ease-in-out both;
+}
+@keyframes hug-echo {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 70%) scale(0.2) rotate(var(--tilt));
+  }
+  20%,
+  65% {
+    opacity: 0.9;
+    transform: translate(-50%, -50%) scale(1) rotate(var(--tilt));
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -130%) scale(1.15);
+  }
+}
+.reaction-close {
+  align-self: flex-start;
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 50%;
+  background: #ffffff80;
+  color: #314838;
+  font-size: 28px;
+  cursor: pointer;
+  pointer-events: auto;
+}
+.selection-reaction strong {
+  display: block;
+  font-size: 22px;
+}
+.selection-reaction p {
+  margin: 4px 0 0;
+  font-size: 18px;
+  line-height: 1.45;
+}
+.option-swatch {
+  display: inline-block;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
+  border-radius: 50%;
+  border: 1px solid #0003;
+  box-shadow: inset 0 2px 3px #ffffff45;
+}
+.answer-option:has(input[type="checkbox"]) .radio-indicator {
+  border-radius: 5px;
+}
+@keyframes reaction-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(-18px) rotate(-2deg) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .reaction-screen-effect {
+    display: none;
+  }
+  .selection-reaction {
+    animation: none;
+  }
+}
