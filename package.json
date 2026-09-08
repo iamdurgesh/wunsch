@@ -1,0 +1,42 @@
+{
+  "name": "frau-inge-geburtstagswunsch",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "test": "vitest run",
+    "test:mobile": "playwright test",
+    "test:api:local": "TEST_LOCAL_API=1 playwright test e2e/submission.pw.ts",
+    "dev:full": "npm run build && wrangler pages dev dist --port 8788",
+    "db:migrate:local": "wrangler d1 migrations apply inge-wishes --local",
+    "db:results:local": "wrangler d1 execute inge-wishes --local --command 'SELECT summary, updated_at FROM wishes ORDER BY updated_at DESC'"
+  },
+  "dependencies": {
+    "@fontsource/cormorant-garamond": "^5.3.0",
+    "@fontsource/dm-sans": "^5.3.0",
+    "lucide-react": "^1.42.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260907.1",
+    "@playwright/test": "^1.63.0",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.7",
+    "@types/node": "^22.20.1",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.7",
+    "@vitejs/plugin-react": "^6.1.1",
+    "jsdom": "^30.0.1",
+    "typescript": "^7.0.2",
+    "vite": "^8.2.2",
+    "vitest": "^5.0.0",
+    "wrangler": "^4.129.1"
+  }
+}

@@ -1,0 +1,16 @@
+:root {
+  --paper: #fff6e5;
+  --card: #fffef9;
+  --ink: #293c31;
+  --olive: #647331;
+  --fir: #196847;
+  --blue: #146caa;
+  --brown: #8c4c2c;
+  --sunshine: #f2b94b;
+  --green: var(--fir);
+  --muted: #62594d;
+  --line: #d9cebb;
+  --olive-tint: #e4f3c4;
+  --blue-tint: #dcefff;
+  --beige: #ffe6c3;
+}

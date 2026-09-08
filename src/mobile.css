@@ -1,0 +1,119 @@
+/* Phone refinements, loaded after the stationery theme. */
+.submission-area { margin: 20px 0 15px; }
+.submission-explanation, .submission-status, .submission-error, .draft-warning { font-size: 13px; line-height: 1.65; }
+.submission-explanation { color: var(--muted); }
+.submission-status { color: var(--green); }
+.submission-status:empty { display: none; }
+.submission-error, .draft-warning { color: #923f30; }
+.birthday-card { scroll-margin-top: 14px; }
+.text-button, .back-button, .privacy-details summary { min-height: 44px; }
+.letter-panel, .option-copy, .summary-row > div { min-width: 0; }
+.option-copy, .summary-row strong, .custom-meme figcaption { overflow-wrap: anywhere; }
+.summary-row .text-button { flex-shrink: 0; }
+textarea { font-size: 16px; }
+
+/* Shared palette: fir-green actions, NATO-olive details, blue links, warm paper. */
+body { background: radial-gradient(ellipse at 95% 0%, #dcefff88, transparent 45%), radial-gradient(ellipse at 0% 70%, #e4f3c466, transparent 40%), var(--paper); }
+.primary-button:hover:not(:disabled) { background: var(--olive); }
+.brand-icon, .art-panel { background: var(--olive-tint); }
+.art-panel { background: linear-gradient(145deg, var(--olive-tint), #f3f9df); }
+.result-art { background: linear-gradient(155deg, var(--blue-tint), var(--olive-tint)); }
+.brand-icon, .eyebrow, .round-stamp, .handwritten { color: var(--olive); }
+.tiny-line, .progress-track div { background: var(--olive); }
+.journey, .button-caption, .below-card, .site-footer, .card-bottom,
+.meme-label, .meme-panel p, .meme-sticker, .art-footnote, .option-copy > span { color: var(--muted); }
+.journey-active .journey-number { background: var(--blue); border-color: var(--blue); }
+.journey .journey-active, .text-button, .back-button, .privacy-details summary { color: var(--blue); }
+.journey-complete .journey-number { background: var(--olive-tint); border-color: var(--olive); }
+.meme-panel { background: var(--beige); }
+.ready-panel + .meme-panel { background: var(--blue-tint); }
+.ready-panel + .meme-panel h2 { color: var(--blue); }
+.meme-panel h2 { color: var(--brown); }
+.answer-option.selected { background: var(--olive-tint); border: 2px solid var(--olive); padding: 14px 12px; }
+.answer-option:hover { background: var(--olive-tint); }
+.ready-facts { color: var(--fir); }
+.art-star, .heading-spark { color: var(--blue); }
+.gift-box { background: repeating-linear-gradient(90deg, transparent 0 17px, #ffffff25 17px 18px), linear-gradient(110deg, #d8ec95, #afce61); }
+.gift-lid { background: #e1f0ac; }
+.gift-ribbon { background: linear-gradient(90deg, var(--fir), #42995e, var(--fir)); }
+.bow { border-color: var(--fir); }
+.bow-right { border-color: #42995e; }
+.gift-tag { background: #fff1bf; color: var(--brown); }
+.art-dot { background: var(--sunshine); }
+.result-confetti { color: var(--blue); }
+.heading-spark { color: var(--sunshine); }
+.underlined { text-decoration-color: var(--brown); }
+:focus-visible, .answer-option:has(input:focus-visible) { outline-color: var(--blue); }
+
+@media (max-width: 700px) {
+  body { font-size: 1.25rem; }
+  .app-shell { min-height: 100svh; padding: 0 max(14px, env(safe-area-inset-left)) max(16px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-right)); }
+  .site-header { height: 72px; }
+  .brand { font-size: 1.375rem; }
+  .header-note { font-size: .875rem; }
+  .journey { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 23px 0; font-size: 1rem; gap: 8px; line-height: 1.4; }
+  .journey > span:not(.journey-line) { flex-direction: column; text-align: center; gap: 7px; }
+  .journey-line { display: none; }
+  .journey-number { width: 30px; height: 30px; font-size: .875rem; flex-shrink: 0; }
+  .letter-panel { padding: 27px 22px; }
+  .eyebrow { font-size: .875rem; letter-spacing: .7px; flex-wrap: wrap; line-height: 1.5; }
+  .body-copy, .question-description, .letter-invitation, .letter-lead { font-size: 1.25rem; line-height: 1.65; }
+  .body-copy { color: var(--muted); }
+  .letter-lead { font-weight: 600; }
+  h1 { font-size: clamp(56px, 16vw, 76px); }
+  .heading-spark { font-size: 27px; margin-left: 14px; }
+  .ready-panel h1, .result-panel h1, .question-title { font-size: clamp(2.75rem, 11vw, 3.375rem); line-height: 1.12; letter-spacing: -1.2px; overflow-wrap: anywhere; }
+  .primary-button { font-size: 1.25rem; min-height: 60px; gap: 12px; line-height: 1.4; }
+  .primary-button svg { flex-shrink: 0; }
+  .button-caption { font-size: 1rem; line-height: 1.5; text-align: center; }
+  .button-caption svg { flex-shrink: 0; }
+  .ready-facts { font-size: 1.125rem; line-height: 1.6; }
+  .ready-facts svg { flex-shrink: 0; }
+  .answer-options { margin: 22px 0 14px; gap: 12px; }
+  .answer-option { min-height: 96px; padding: 18px 13px; gap: 11px; }
+  .answer-option.selected { padding: 17px 12px; }
+  .option-copy strong { font-size: 1.25rem; line-height: 1.4; }
+  .option-copy > span { font-size: 1.125rem; line-height: 1.55; color: var(--muted); }
+  .radio-indicator { width: 25px; height: 25px; }
+  .option-emoji { font-size: 27px; }
+  .question-panel { padding-bottom: 12px; }
+  .question-actions { padding: 12px 0 max(12px, env(safe-area-inset-bottom)); background: var(--card); }
+  .question-card { overflow: visible; }
+  .question-card .card-content { border-radius: 13px 13px 0 0; }
+  .question-card .progress-track { border-radius: 0 0 13px 13px; overflow: hidden; }
+  .question-card .meme-panel { min-height: 0; display: grid; grid-template-columns: 54px 1fr; column-gap: 14px; text-align: left; align-items: center; padding: 18px; }
+  .question-card .meme-label, .question-card .meme-sticker { display: none; }
+  .question-card .meme-emoji { grid-row: 1 / 3; font-size: 43px; margin: 0; }
+  .question-card .meme-panel h2 { font-size: 1.875rem; margin: 0 0 7px; }
+  .question-card .meme-panel p { font-size: 1.125rem; margin: 0; max-width: none; }
+  .question-card .custom-meme { grid-column: 1 / -1; }
+  .custom-meme img { max-height: 190px; }
+  .custom-meme figcaption, .meme-panel p { font-size: 1.125rem; }
+  .meme-label, .meme-sticker, .art-footnote, .result-art .art-footnote { font-size: .875rem; line-height: 1.6; letter-spacing: .6px; }
+  .handwritten { font-size: 2rem; line-height: 1.3; }
+  .card-bottom { font-size: .75rem; line-height: 1.5; letter-spacing: .6px; gap: 14px; height: auto; min-height: 60px; padding: 12px 18px; }
+  .card-bottom > span:last-child { flex-shrink: 0; font-size: 1rem; }
+  .back-button, .text-button { font-size: 1.125rem; padding: 10px; min-height: 48px; }
+  .below-card > span:not(.below-spacer) { font-size: 1rem; line-height: 1.5; text-align: center; }
+  .below-card > span svg { flex-shrink: 0; }
+  .result-panel .body-copy { font-size: 1.25rem; }
+  .summary-row { gap: 10px; padding: 15px 0; }
+  .summary-row small { font-size: 1rem; }
+  .summary-row strong { font-size: 1.25rem; line-height: 1.5; }
+  .note-label { font-size: 1.125rem; }
+  textarea { font-size: 1.25rem; }
+  .submission-explanation, .submission-status, .submission-error, .draft-warning { font-size: 1.125rem; }
+  .site-footer, .site-footer > span:first-child, .site-footer > span:last-child { font-size: .875rem; line-height: 1.6; }
+  .privacy-details summary { font-size: 1rem; }
+  .privacy-details p { position: static; width: 100%; max-width: 340px; font-size: 1.125rem; transform: none; margin: 0 0 12px; }
+}
+
+@media (max-width: 370px) {
+  .letter-panel { padding: 25px 17px; }
+  .option-emoji { font-size: 23px; }
+  .answer-option { gap: 8px; padding: 14px 10px; }
+  .answer-option.selected { padding: 13px 9px; }
+  .summary-row { flex-wrap: wrap; }
+  .summary-row > div { flex-basis: calc(100% - 40px); }
+  .summary-row .text-button { margin-left: 32px; padding: 10px 2px; }
+}
