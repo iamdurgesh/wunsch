@@ -16,16 +16,12 @@ for (const viewport of [
     const errors: string[] = [];
     page.on("pageerror", (error) => errors.push(error.message));
     await page.goto("/");
-    const noOverflow = async () => {
-      if (await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)) {
-        console.log(await page.evaluate(() => Array.from(document.querySelectorAll('body *')).filter((element) => element.getBoundingClientRect().right > window.innerWidth).map((element) => ({ tag: element.tagName, className: element.className, width: element.getBoundingClientRect().width, text: element.textContent?.slice(0, 70) })).slice(0, 20)));
-      }
+    const noOverflow = async () =>
       expect(
         await page.evaluate(
           () => document.documentElement.scrollWidth <= window.innerWidth,
         ),
       ).toBe(true);
-    };
     await noOverflow();
     if (viewport.width === 390)
       await page.screenshot({

@@ -436,7 +436,6 @@ function App() {
                     <SubmitWishes
                       answers={answers}
                       note={note}
-                      invite={invite}
                       sentSummary={sentSummary}
                       onSent={setSentSummary}
                     />
@@ -522,11 +521,11 @@ function App() {
           <p>
             Ihr Entwurf wird in diesem Browser-Tab zwischengespeichert, damit er
             beim Neuladen erhalten bleibt. Nach 24 Stunden ohne Nutzung wird er
-            nicht wiederhergestellt. Erst mit „Wünsche senden“ speichern Sie
-            Ihre Antworten und Ihren Freitext bei Cloudflare für die Person, die
-            Sie eingeladen hat. Zum Löschen gesendeter Wünsche wenden Sie sich
-            bitte an diese Person. Die App verwendet keine Analyse-Tools oder
-            extern geladenen Schriften.
+            nicht wiederhergestellt. Erst wenn Sie den Wunschzettel absenden,
+            speichern Sie Ihre Antworten und Ihren Freitext bei Cloudflare für
+            die Person, die Sie eingeladen hat. Zum Löschen gesendeter Wünsche
+            wenden Sie sich bitte an diese Person. Die App verwendet keine
+            Analyse-Tools oder extern geladenen Schriften.
           </p>
         </details>
         <span>
