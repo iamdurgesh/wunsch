@@ -21,6 +21,7 @@ export type Question = {
     large?: boolean;
     screenEmoji?: string;
   };
+  reactions?: readonly NonNullable<Question["reaction"]>[];
   // Optional local meme: put the image in public/memes/ and set its path here.
   meme?: { src: string; alt: string; caption: string };
 };
@@ -111,6 +112,15 @@ export const questions: readonly Question[] = [
   },
   {
     id: "season",
+    reactions: [
+      {
+        optionId: "neutral",
+        emoji: "😌",
+        headline: "Ich erinnere mich, das haben Sie einmal gesagt.",
+        caption: "Das ist mir im Gedächtnis geblieben!",
+        large: true,
+      },
+    ],
     category: "Sonne oder Kuschelwetter",
     title: "Welche Jahreszeit mögen Sie am liebsten?",
     description:
@@ -141,6 +151,12 @@ export const questions: readonly Question[] = [
         label: "Winter",
         description:
           "Kalte Nasen, warme Decken und vielleicht ein bisschen Schnee.",
+      },
+      {
+        id: "neutral",
+        emoji: "😌",
+        label: "Ich stehe den Jahreszeiten ganz neutral gegenüber.",
+        description: "Ich habe keine bestimmte Lieblingsjahreszeit.",
       },
     ],
     reaction: {
@@ -212,8 +228,8 @@ export const questions: readonly Question[] = [
       {
         id: "surprise",
         emoji: "✨",
-        label: "Überraschen Sie mich!",
-        description: "Ein bisschen weiß ich es selbst noch nicht.",
+        label: "Wenn es mich überrascht.",
+        description: "Etwas, womit ich gar nicht gerechnet hätte.",
       },
     ],
     reaction: {
@@ -232,6 +248,22 @@ export const questions: readonly Question[] = [
   },
   {
     id: "gift-value",
+    reactions: [
+      {
+        optionId: "modest",
+        emoji: "🙈",
+        headline: "Bitte wählen Sie das nicht!",
+        caption: " …",
+        large: true,
+      },
+      {
+        optionId: "intention",
+        emoji: "💛",
+        headline: "Sehr schön!",
+        caption: "Ein Geschenk mit Herz – genau darum geht’s.",
+        large: true,
+      },
+    ],
     category: "Herz oder Preisschild",
     title: "Darf’s etwas mehr sein – oder bekommt das Preisschild Hausverbot?",
     description:

@@ -1,0 +1,203 @@
+.visit-finale {
+  box-sizing: border-box;
+  width: min(580px, calc(100% - 24px));
+  max-height: calc(100dvh - 24px);
+  padding: 36px 30px 26px;
+  border: 1px solid #d4b67e;
+  border-radius: 28px;
+  color: #314838;
+  background: radial-gradient(ellipse at top, #fff0c9, #fffaf0 65%);
+  box-shadow: 0 24px 100px #17291f55;
+  overflow-y: auto;
+  text-align: center;
+}
+.visit-finale::backdrop {
+  background: #23392e99;
+  backdrop-filter: blur(6px);
+}
+.visit-close {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 50%;
+  background: #fff9;
+  color: inherit;
+  font-size: 28px;
+  cursor: pointer;
+}
+.visit-eyebrow {
+  max-width: 85%;
+  margin: 0 auto;
+  font-size: 10px;
+  letter-spacing: 1.8px;
+  line-height: 1.6;
+  color: #776540;
+}
+.visit-content {
+  animation: visit-arrive 400ms ease-out;
+}
+.visit-hero {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 26px;
+  margin: 16px 0 6px;
+  color: #b99240;
+}
+.visit-hero > span:nth-child(2) {
+  font-size: clamp(64px, 15vw, 96px);
+  line-height: 1.2;
+  animation: visit-cheer 650ms ease-out;
+}
+.visit-hero > span:not(:nth-child(2)) {
+  font-size: 32px;
+}
+.visit-finale h2 {
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: clamp(40px, 10vw, 64px);
+  font-weight: 500;
+  line-height: 1.02;
+  margin: 12px 0 18px;
+  overflow-wrap: anywhere;
+}
+.visit-question {
+  font-size: 23px;
+  line-height: 1.35;
+  margin: 0 0 10px;
+}
+.visit-copy {
+  font-size: 17px;
+  line-height: 1.6;
+  color: #657060;
+  margin: 0 0 22px;
+}
+.visit-options {
+  display: grid;
+  gap: 10px;
+}
+.visit-choice {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  padding: 16px;
+  border: 1px solid #d7dccb;
+  border-radius: 15px;
+  background: #fffdf7;
+  color: inherit;
+  cursor: pointer;
+}
+.visit-choice > span:first-child {
+  font-size: 30px;
+}
+.visit-choice > span:nth-child(2) {
+  flex: 1;
+  min-width: 0;
+}
+.visit-choice strong {
+  display: block;
+  font-size: 18px;
+  line-height: 1.35;
+}
+.visit-choice small {
+  display: block;
+  font-size: 14px;
+  line-height: 1.45;
+  margin-top: 4px;
+  color: #657060;
+}
+.visit-choice-joy {
+  background: #e9efdd;
+  border-color: #9dad85;
+}
+.visit-choice:hover {
+  border-color: #718652;
+  background: #f0f3e8;
+}
+.visit-ticket {
+  display: grid;
+  gap: 9px;
+  padding: 20px;
+  margin-bottom: 22px;
+  border-block: 1px dashed #b9bf9e;
+}
+.visit-ticket > span {
+  font-size: 10px;
+  letter-spacing: 2px;
+}
+.visit-ticket strong {
+  font-size: 21px;
+}
+.visit-ticket small {
+  font-size: 14px;
+  line-height: 1.5;
+  color: #657060;
+}
+.visit-finale .visit-send {
+  width: 100%;
+  justify-content: center;
+  font-size: 17px;
+  gap: 12px;
+  min-height: 52px;
+}
+.visit-back {
+  background: none;
+  border: 0;
+  color: #657060;
+  text-decoration: underline;
+  font-size: 15px;
+  min-height: 44px;
+  margin-top: 8px;
+  cursor: pointer;
+}
+.visit-finale button:focus-visible {
+  outline: 3px solid #627c46;
+  outline-offset: 3px;
+}
+.visit-finale button:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+@keyframes visit-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes visit-cheer {
+  0% {
+    transform: scale(0.6) rotate(-12deg);
+  }
+  60% {
+    transform: scale(1.12) rotate(8deg);
+  }
+  100% {
+    transform: none;
+  }
+}
+@media (max-width: 380px) {
+  .visit-finale {
+    padding: 32px 16px 18px;
+  }
+  .visit-choice {
+    padding: 12px;
+    gap: 8px;
+  }
+  .visit-question {
+    font-size: 21px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .visit-content,
+  .visit-hero > span:nth-child(2) {
+    animation: none;
+  }
+}
