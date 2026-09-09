@@ -22,6 +22,7 @@ export type Env = {
 const json = (body: object, status = 200) =>
   new Response(JSON.stringify(body), { status, headers });
 export const MAX_BODY_BYTES = 512 * 1024;
+const MAX_STORED_BYTES = 1_800_000;
 
 async function digest(value: string) {
   return new Uint8Array(
@@ -152,6 +153,41 @@ export async function handleWishes(
   const invitationId = Array.from(identity, (byte) =>
     byte.toString(16).padStart(2, "0"),
   ).join("");
+  const values = [
+    invitationId,
+    JSON.stringify(
+      readableAnswers(
+        payload.answers,
+        payload.shownPopups as string[] | undefined,
+        payload.visitChoice as VisitChoice | undefined,
+      ),
+    ),
+    payload.note.trim(),
+    buildSubmissionSummary(
+      payload.answers,
+      payload.note,
+      payload.shownPopups as string[] | undefined,
+      payload.visitChoice as VisitChoice | undefined,
+    ),
+    new Date().toISOString(),
+    interactionLog
+      ? JSON.stringify({
+          Ereignisse: readableInteractions(interactionLog),
+          Nicht_aufgezeichnet: interactionLog.omitted,
+        })
+      : null,
+    interactionLog
+      ? interactionSummary(interactionLog)
+      : "Nicht erfasst (ältere Version).",
+  ];
+  if (
+    values.reduce(
+      (total, value) =>
+        total + new TextEncoder().encode(value ?? "").byteLength,
+      0,
+    ) > MAX_STORED_BYTES
+  )
+    return json({ error: "Submission too large" }, 413);
   try {
     await env.DB.prepare(
       `INSERT INTO wishes (invitation_id, answers_json, note, summary, updated_at, interaction_log_json, interaction_summary)
@@ -160,36 +196,21 @@ export async function handleWishes(
         note = excluded.note, summary = excluded.summary, updated_at = excluded.updated_at,
         interaction_log_json = excluded.interaction_log_json, interaction_summary = excluded.interaction_summary`,
     )
-      .bind(
-        invitationId,
-        JSON.stringify(
-          readableAnswers(
-            payload.answers,
-            payload.shownPopups as string[] | undefined,
-            payload.visitChoice as VisitChoice | undefined,
-          ),
-        ),
-        payload.note.trim(),
-        buildSubmissionSummary(
-          payload.answers,
-          payload.note,
-          payload.shownPopups as string[] | undefined,
-          payload.visitChoice as VisitChoice | undefined,
-        ),
-        new Date().toISOString(),
-        interactionLog
-          ? JSON.stringify({
-              Ereignisse: readableInteractions(interactionLog),
-              Nicht_aufgezeichnet: interactionLog.omitted,
-            })
-          : null,
-        interactionLog
-          ? interactionSummary(interactionLog)
-          : "Nicht erfasst (ältere Version).",
-      )
+      .bind(...values)
       .run();
     return json({ saved: true });
-  } catch {
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      /no column named interaction_(?:log_json|summary)/i.test(error.message)
+    )
+      return new Response(
+        JSON.stringify({
+          error: "Storage unavailable",
+          code: "SCHEMA_OUTDATED",
+        }),
+        { status: 503, headers },
+      );
     return json({ error: "Storage unavailable" }, 503);
   }
 }

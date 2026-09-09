@@ -10,7 +10,7 @@ test("local Cloudflare saves wishes and acknowledges receipt on mobile", async (
     "Run with TEST_LOCAL_API=1 and npm run dev:full",
   );
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("http://127.0.0.1:8788/");
+  await page.goto(process.env.LOCAL_API_URL ?? "http://127.0.0.1:8788/");
   await page.getByRole("button", { name: "Na dann, los geht’s" }).click();
   await page.getByRole("button", { name: "Ich bin bereit" }).click();
   for (let index = 0; index < questions.length; index++) {

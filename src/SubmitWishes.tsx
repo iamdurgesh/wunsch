@@ -105,7 +105,14 @@ export function SubmitWishes({
       });
       const result = await response.json().catch(() => null);
       if (!response.ok || result?.saved !== true) {
-        throw new Error(retryMessage);
+        setError(
+          response.status === 429
+            ? "Die Wunschpost braucht eine kurze Verschnaufpause. Bitte versuchen Sie es in einer Minute noch einmal. Ihre Antworten sind noch da."
+            : response.status === 503 && result?.code === "SCHEMA_OUTDATED"
+              ? "Die Wunschpost ist noch nicht ganz startklar. Ihre Antworten bleiben hier. Bitte geben Sie mir kurz Bescheid."
+              : retryMessage,
+        );
+        return;
       }
       onSent(summary);
       setFinaleOpen(false);

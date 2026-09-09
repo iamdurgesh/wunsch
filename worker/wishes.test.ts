@@ -5,6 +5,10 @@ import type { D1Database } from "@cloudflare/workers-types";
 import { handleWishes, MAX_BODY_BYTES } from "./wishes";
 import { questionnaireVersion, questions } from "../src/questions";
 
+const limiters = {
+  SUBMISSION_LIMITER: { limit: async () => ({ success: true }) },
+  WRITE_LIMITER: { limit: async () => ({ success: true }) },
+};
 const token = "a".repeat(64);
 const answers = Object.fromEntries(
   questions.map((question) => [question.id, question.options[0].id]),
@@ -57,6 +61,90 @@ function request(
 }
 
 describe("private wish submission", () => {
+  it("treats SQL and HTML payloads as literal text", async () => {
+    const note = "'); DROP TABLE wishes; -- <script>alert(1)</script>";
+    expect(
+      (
+        await handleWishes(
+          request({ answers, note, version: questionnaireVersion }),
+          { DB, INVITE_TOKEN: token, ...limiters },
+        )
+      ).status,
+    ).toBe(200);
+    expect(sqlite.prepare("SELECT note FROM wishes").get()!.note).toBe(note);
+    expect(
+      sqlite.prepare("SELECT count(*) AS count FROM wishes").get()!.count,
+    ).toBe(1);
+  });
+  it("rejects excessive submissions before reading the body or touching D1", async () => {
+    const response = await handleWishes(request(), {
+      DB,
+      INVITE_TOKEN: token,
+      ...limiters,
+      SUBMISSION_LIMITER: { limit: async () => ({ success: false }) },
+    });
+    expect(response.status).toBe(429);
+    expect(response.headers.get("Retry-After")).toBe("60");
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(sqlite.prepare("SELECT * FROM wishes").all()).toHaveLength(0);
+  });
+  it("enforces the shared write budget and fails closed when limits are unavailable", async () => {
+    const limited = {
+      DB,
+      INVITE_TOKEN: token,
+      ...limiters,
+      WRITE_LIMITER: { limit: async () => ({ success: false }) },
+    };
+    expect((await handleWishes(request(), limited)).status).toBe(429);
+    expect(
+      (await handleWishes(request(), { DB, INVITE_TOKEN: token })).status,
+    ).toBe(503);
+    expect(
+      (
+        await handleWishes(request(), {
+          ...limited,
+          WRITE_LIMITER: {
+            limit: async () => {
+              throw new Error("Unavailable");
+            },
+          },
+        })
+      ).status,
+    ).toBe(503);
+    expect(sqlite.prepare("SELECT * FROM wishes").all()).toHaveLength(0);
+  });
+  it("rejects a cross-site browser request even if it claims the expected origin", async () => {
+    expect(
+      (
+        await handleWishes(
+          request(undefined, { "Sec-Fetch-Site": "cross-site" }),
+          { DB, INVITE_TOKEN: token, ...limiters },
+        )
+      ).status,
+    ).toBe(403);
+    expect(sqlite.prepare("SELECT * FROM wishes").all()).toHaveLength(0);
+  });
+  it("reports a missing migration without leaking SQL or data", async () => {
+    sqlite.close();
+    sqlite = new DatabaseSync(":memory:");
+    sqlite.exec(
+      readFileSync(
+        new URL("../migrations/0001_wishes.sql", import.meta.url),
+        "utf8",
+      ),
+    );
+    const response = await handleWishes(request(), {
+      DB,
+      INVITE_TOKEN: token,
+      ...limiters,
+    });
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({
+      error: "Storage unavailable",
+      code: "SCHEMA_OUTDATED",
+    });
+    expect(sqlite.prepare("SELECT * FROM wishes").all()).toHaveLength(0);
+  });
   it("writes repeated impressions and input methods atomically with the answers", async () => {
     const event = {
       at: "2026-09-09T19:00:00.000Z",
@@ -83,7 +171,7 @@ describe("private wish submission", () => {
         version: questionnaireVersion,
         interactionLog,
       }),
-      { DB, INVITE_TOKEN: token },
+      { DB, INVITE_TOKEN: token, ...limiters },
     );
     expect(response.status).toBe(200);
     const row = sqlite.prepare("SELECT * FROM wishes").get()!;
@@ -101,7 +189,7 @@ describe("private wish submission", () => {
         version: questionnaireVersion,
         interactionLog,
       }),
-      { DB, INVITE_TOKEN: token },
+      { DB, INVITE_TOKEN: token, ...limiters },
     );
     expect(retry.status).toBe(200);
     expect(sqlite.prepare("SELECT * FROM wishes").all()).toHaveLength(1);
@@ -154,7 +242,7 @@ describe("private wish submission", () => {
           visitChoice,
           version: questionnaireVersion,
         }),
-        { DB, INVITE_TOKEN: token },
+        { DB, INVITE_TOKEN: token, ...limiters },
       );
       expect(response.status).toBe(200);
       const row = sqlite
@@ -183,7 +271,8 @@ describe("private wish submission", () => {
       shownPopups: ["season:neutral", "gift-value:modest"],
     });
     expect(
-      (await handleWishes(incoming, { DB, INVITE_TOKEN: token })).status,
+      (await handleWishes(incoming, { DB, INVITE_TOKEN: token, ...limiters }))
+        .status,
     ).toBe(200);
     const row = sqlite
       .prepare("SELECT answers_json, summary FROM wishes")
@@ -201,7 +290,7 @@ describe("private wish submission", () => {
     expect(row.summary).toContain("auch bei später geänderter Antwort");
   });
   it("distinguishes unrecorded popups from an explicitly empty history", async () => {
-    await handleWishes(request(), { DB, INVITE_TOKEN: token });
+    await handleWishes(request(), { DB, INVITE_TOKEN: token, ...limiters });
     expect(
       sqlite.prepare("SELECT summary FROM wishes").get()!.summary,
     ).toContain("Nicht erfasst");
@@ -212,7 +301,7 @@ describe("private wish submission", () => {
         version: questionnaireVersion,
         shownPopups: [],
       }),
-      { DB, INVITE_TOKEN: token },
+      { DB, INVITE_TOKEN: token, ...limiters },
     );
     expect(
       sqlite.prepare("SELECT summary FROM wishes").get()!.summary,
@@ -222,7 +311,7 @@ describe("private wish submission", () => {
     const submit = (key: string) => {
       const incoming = request(undefined, { "X-Submission-Key": key });
       incoming.headers.delete("X-Invite-Token");
-      return handleWishes(incoming, { DB });
+      return handleWishes(incoming, { DB, ...limiters });
     };
     expect((await submit("c".repeat(64))).status).toBe(200);
     expect((await submit("c".repeat(64))).status).toBe(200);
@@ -246,7 +335,7 @@ describe("private wish submission", () => {
             note: "",
             version: questionnaireVersion,
           }),
-          { DB, INVITE_TOKEN: token },
+          { DB, INVITE_TOKEN: token, ...limiters },
         )
       ).status,
     ).toBe(200);
@@ -260,7 +349,8 @@ describe("private wish submission", () => {
   });
   it("stores a readable result and updates the same row on retry or edit", async () => {
     expect(
-      (await handleWishes(request(), { DB, INVITE_TOKEN: token })).status,
+      (await handleWishes(request(), { DB, INVITE_TOKEN: token, ...limiters }))
+        .status,
     ).toBe(200);
     expect(
       (
@@ -270,7 +360,7 @@ describe("private wish submission", () => {
             note: "  Ein Ausflug!  ",
             version: questionnaireVersion,
           }),
-          { DB, INVITE_TOKEN: token },
+          { DB, INVITE_TOKEN: token, ...limiters },
         )
       ).status,
     ).toBe(200);
@@ -287,7 +377,7 @@ describe("private wish submission", () => {
       (
         await handleWishes(
           request(undefined, { "X-Invite-Token": "b".repeat(64) }),
-          { DB, INVITE_TOKEN: token },
+          { DB, INVITE_TOKEN: token, ...limiters },
         )
       ).status,
     ).toBe(401);
@@ -295,7 +385,7 @@ describe("private wish submission", () => {
       (
         await handleWishes(
           request(undefined, { Origin: "https://another.example" }),
-          { DB, INVITE_TOKEN: token },
+          { DB, INVITE_TOKEN: token, ...limiters },
         )
       ).status,
     ).toBe(403);
@@ -304,6 +394,7 @@ describe("private wish submission", () => {
         await handleWishes(new Request("https://birthday.example/api/wishes"), {
           DB,
           INVITE_TOKEN: token,
+          ...limiters,
         })
       ).status,
     ).toBe(405);
@@ -352,7 +443,13 @@ describe("private wish submission", () => {
     "rejects incomplete, unknown, oversized or stale answers",
     async (body) => {
       expect(
-        (await handleWishes(request(body), { DB, INVITE_TOKEN: token })).status,
+        (
+          await handleWishes(request(body), {
+            DB,
+            INVITE_TOKEN: token,
+            ...limiters,
+          })
+        ).status,
       ).toBe(400);
       expect(sqlite.prepare("SELECT * FROM wishes").all()).toHaveLength(0);
     },
@@ -364,13 +461,18 @@ describe("private wish submission", () => {
         await handleWishes(request({ data: "x".repeat(MAX_BODY_BYTES + 1) }), {
           DB,
           INVITE_TOKEN: token,
+          ...limiters,
         })
       ).status,
     ).toBe(413);
     expect((await handleWishes(request(), {})).status).toBe(503);
     sqlite.close();
     sqlite = new DatabaseSync(":memory:");
-    const response = await handleWishes(request(), { DB, INVITE_TOKEN: token });
+    const response = await handleWishes(request(), {
+      DB,
+      INVITE_TOKEN: token,
+      ...limiters,
+    });
     expect(response.status).toBe(503);
     expect(await response.text()).not.toContain("INSERT");
     expect(response.headers.get("Cache-Control")).toBe("no-store");
