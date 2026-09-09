@@ -1,4 +1,14 @@
-import { useEffect, useRef, useState } from "react";
+import {
+  emptyInteractionLog,
+  inputMethod,
+  MAX_INTERACTIONS,
+  selectedIds,
+  type InteractionLog,
+  type RecordInteraction,
+} from "./interactions";
+import { useDisplayEvent } from "./use-display-event";
+import type { VisitChoice } from "./visit-plan";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -51,8 +61,35 @@ function GiftArt({ small = false }: { small?: boolean }) {
 
 function App() {
   const [draft] = useState(readDraft);
+  const [interactionLog, setInteractionLog] = useState<InteractionLog>(
+    draft.interactionLog ?? emptyInteractionLog(),
+  );
+  const interactionRef = useRef(interactionLog);
+  const pointerRef = useRef("unknown");
+  const recordInteraction = useCallback<RecordInteraction>((event) => {
+    const previous = interactionRef.current;
+    const next =
+      previous.events.length < MAX_INTERACTIONS
+        ? {
+            ...previous,
+            events: [
+              ...previous.events,
+              { ...event, at: new Date().toISOString() },
+            ],
+          }
+        : { ...previous, omitted: previous.omitted + 1 };
+    interactionRef.current = next;
+    setInteractionLog(next);
+  }, []);
+  const getInteractionLog = useCallback(() => interactionRef.current, []);
   const [step, setStep] = useState(draft.step);
   const [answers, setAnswers] = useState<Answers>(draft.answers);
+  const [shownPopups, setShownPopups] = useState<string[]>(
+    draft.shownPopups ?? [],
+  );
+  const [visitChoice, setVisitChoice] = useState<VisitChoice | undefined>(
+    draft.visitChoice,
+  );
   const [note, setNote] = useState(draft.note);
   const [sentSummary, setSentSummary] = useState(draft.sentSummary);
   const [invite] = useState(readInvite);
@@ -63,16 +100,56 @@ function App() {
   const lastStep = questions.length + 2;
   const questionIndex = step - 2;
   const question = questions[questionIndex];
+  const reaction =
+    question?.reactions?.find((item) =>
+      answerIncludes(answers[question.id], item.optionId),
+    ) ?? question?.reaction;
+  const popupId = reaction ? `${question.id}:${reaction.optionId}` : undefined;
+  const recordPopup = useCallback(() => {
+    if (popupId)
+      setShownPopups((previous) =>
+        previous.includes(popupId) ? previous : [...previous, popupId],
+      );
+  }, [popupId]);
   const isQuestion = step >= 2 && step < lastStep;
   const isDone = step === lastStep;
+  useDisplayEvent(
+    isQuestion
+      ? question.id
+      : step === 0
+        ? "intro"
+        : step === 1
+          ? "ready"
+          : "summary",
+    "screen_opened",
+    recordInteraction,
+  );
   const progress = Math.round((step / lastStep) * 100);
 
   useEffect(() => {
     rememberInvite(invite);
   }, [invite]);
   useEffect(() => {
-    setDraftSaved(saveDraft({ step, answers, note, sentSummary }));
-  }, [step, answers, note, sentSummary]);
+    setDraftSaved(
+      saveDraft({
+        step,
+        answers,
+        note,
+        sentSummary,
+        shownPopups,
+        visitChoice,
+        interactionLog,
+      }),
+    );
+  }, [
+    step,
+    answers,
+    note,
+    sentSummary,
+    shownPopups,
+    visitChoice,
+    interactionLog,
+  ]);
 
   useEffect(() => {
     if (hasNavigated.current) {
@@ -91,7 +168,11 @@ function App() {
       )
     )
       return;
+    interactionRef.current = emptyInteractionLog();
+    setInteractionLog(interactionRef.current);
     setAnswers({});
+    setShownPopups([]);
+    setVisitChoice(undefined);
     setNote("");
     setSentSummary("");
     setStep(0);
@@ -102,12 +183,28 @@ function App() {
     setStep(step + 1);
   }
 
+  function goBack() {
+    recordInteraction({ kind: "button_activated", target: "back" });
+    setStep((previous) => Math.max(0, previous - 1));
+  }
+
   return (
-    <div className="app-shell">
+    <div
+      className="app-shell"
+      onPointerDownCapture={(event) => {
+        pointerRef.current = event.pointerType;
+      }}
+      onKeyDownCapture={() => {
+        pointerRef.current = "keyboard";
+      }}
+    >
       {isQuestion && (
         <SelectionReaction
-          key={`${question.id}-${question.reaction ? answerIncludes(answers[question.id], question.reaction.optionId) : false}`}
-          reaction={question.reaction}
+          key={`${question.id}-${reaction?.optionId}-${reaction ? answerIncludes(answers[question.id], reaction.optionId) : false}`}
+          reaction={reaction}
+          onShown={recordPopup}
+          interactionTarget={popupId}
+          onInteraction={recordInteraction}
           answer={answers[question.id]}
         />
       )}
@@ -163,6 +260,13 @@ function App() {
           <div
             className={`birthday-card ${isDone ? "summary-card" : ""} ${isQuestion ? "question-card" : ""}`}
           >
+            {step > 2 && (
+              <div className="card-top-navigation">
+                <button className="back-button" onClick={goBack}>
+                  <ArrowLeft size={18} /> Vorherige Frage
+                </button>
+              </div>
+            )}
             <div className="card-content" key={step}>
               {step === 0 && (
                 <>
@@ -310,16 +414,29 @@ function App() {
                               answers[question.id],
                               option.id,
                             )}
-                            onChange={() =>
+                            onClick={(event) =>
+                              recordInteraction({
+                                kind: "option_activated",
+                                target: `${question.id}:${option.id}`,
+                                input: inputMethod(event, pointerRef.current),
+                              })
+                            }
+                            onChange={() => {
+                              const next = selectAnswer(
+                                question,
+                                answers[question.id],
+                                option.id,
+                              );
+                              recordInteraction({
+                                kind: "answer_changed",
+                                target: question.id,
+                                selected: selectedIds(next),
+                              });
                               setAnswers((previous) => ({
                                 ...previous,
-                                [question.id]: selectAnswer(
-                                  question,
-                                  previous[question.id],
-                                  option.id,
-                                ),
-                              }))
-                            }
+                                [question.id]: next,
+                              }));
+                            }}
                           />
                           {option.swatch ? (
                             <span
@@ -434,6 +551,11 @@ function App() {
                       rows={2}
                     />
                     <SubmitWishes
+                      onInteraction={recordInteraction}
+                      getInteractionLog={getInteractionLog}
+                      initialVisitChoice={visitChoice}
+                      onVisitChoice={setVisitChoice}
+                      shownPopups={shownPopups}
                       answers={answers}
                       note={note}
                       sentSummary={sentSummary}
@@ -494,7 +616,7 @@ function App() {
           <button
             className="back-button"
             disabled={step === 0}
-            onClick={() => setStep(Math.max(0, step - 1))}
+            onClick={goBack}
           >
             <ArrowLeft size={15} /> Zurück
           </button>
@@ -522,10 +644,11 @@ function App() {
             Ihr Entwurf wird in diesem Browser-Tab zwischengespeichert, damit er
             beim Neuladen erhalten bleibt. Nach 24 Stunden ohne Nutzung wird er
             nicht wiederhergestellt. Erst wenn Sie den Wunschzettel absenden,
-            speichern Sie Ihre Antworten und Ihren Freitext bei Cloudflare für
-            die Person, die Sie eingeladen hat. Zum Löschen gesendeter Wünsche
-            wenden Sie sich bitte an diese Person. Die App verwendet keine
-            Analyse-Tools oder extern geladenen Schriften.
+            speichern Sie Ihre Antworten, Ihren Freitext, Ihren Besuchswunsch
+            und den Verlauf Ihrer Auswahl und der angezeigten Popups bei
+            Cloudflare für die Person, die Sie eingeladen hat. Zum Löschen
+            gesendeter Wünsche wenden Sie sich bitte an diese Person. Die App
+            lädt keine externen Analyse-Tools oder Schriften.
           </p>
         </details>
         <span>

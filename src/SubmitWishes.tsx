@@ -1,7 +1,15 @@
+import {
+  inputMethod,
+  type InputMethod,
+  type InteractionLog,
+  type RecordInteraction,
+} from "./interactions";
+import { VisitFinale } from "./VisitFinale";
+import { type VisitChoice } from "./visit-plan";
+import { buildSubmissionSummary } from "./submission-details";
 import { useRef, useState } from "react";
 import { CheckCheck, Send } from "lucide-react";
 import {
-  buildSummary,
   isValidAnswers,
   questionnaireVersion,
   type Answers,
@@ -9,24 +17,50 @@ import {
 
 type Props = {
   answers: Answers;
+  onInteraction?: RecordInteraction;
+  getInteractionLog?: () => InteractionLog;
+  shownPopups?: string[];
   note: string;
+  initialVisitChoice?: VisitChoice;
+  onVisitChoice?: (choice: VisitChoice) => void;
   sentSummary: string;
   onSent: (summary: string) => void;
 };
 const retryMessage =
   "Das Senden hat nicht geklappt. Ihre Antworten sind noch da. Bitte versuchen Sie es gleich noch einmal.";
 
-export function SubmitWishes({ answers, note, sentSummary, onSent }: Props) {
+export function SubmitWishes({
+  answers,
+  note,
+  sentSummary,
+  onSent,
+  shownPopups,
+  initialVisitChoice,
+  onVisitChoice,
+  onInteraction,
+  getInteractionLog,
+}: Props) {
+  const [visitChoice, setVisitChoice] = useState<VisitChoice | undefined>(
+    initialVisitChoice,
+  );
+  const [finaleOpen, setFinaleOpen] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
   const inFlight = useRef(false);
   const submissionKey = useRef("");
-  const summary = buildSummary(answers, note);
+  const summary = buildSubmissionSummary(
+    answers,
+    note,
+    shownPopups,
+    visitChoice,
+  );
   const sent = sentSummary === summary;
   const complete = isValidAnswers(answers, true) && note.length <= 500;
 
-  async function submit() {
-    if (!complete || inFlight.current || sent) return;
+  async function submit(input: InputMethod = "unknown") {
+    if (!complete || !visitChoice || inFlight.current || sent) return;
+    onInteraction?.({ kind: "button_activated", target: "send", input });
+    const interactionLog = getInteractionLog?.();
     inFlight.current = true;
     setSending(true);
     setError("");
@@ -59,7 +93,14 @@ export function SubmitWishes({ answers, note, sentSummary, onSent }: Props) {
           "Content-Type": "application/json",
           "X-Submission-Key": submissionKey.current,
         },
-        body: JSON.stringify({ answers, note, version: questionnaireVersion }),
+        body: JSON.stringify({
+          answers,
+          note,
+          shownPopups,
+          visitChoice,
+          interactionLog,
+          version: questionnaireVersion,
+        }),
         signal: AbortSignal.timeout(15000),
       });
       const result = await response.json().catch(() => null);
@@ -67,6 +108,7 @@ export function SubmitWishes({ answers, note, sentSummary, onSent }: Props) {
         throw new Error(retryMessage);
       }
       onSent(summary);
+      setFinaleOpen(false);
     } catch {
       setError(retryMessage);
     } finally {
@@ -77,18 +119,19 @@ export function SubmitWishes({ answers, note, sentSummary, onSent }: Props) {
 
   return (
     <div className="submission-area">
-      <p className="submission-explanation" id="submission-explanation">
-        Erst wenn Sie diesen Knopf drücken, werden Ihre Antworten und Ihr
-        Herzenswunsch gesendet und für die Person gespeichert, die Sie
-        eingeladen hat. Bis dahin bleibt der Wunschzettel in diesem Browser-Tab.
-        Die Geschenkabteilung wartet gespannt!
-      </p>
       <button
         className="primary-button"
-        onClick={submit}
+        onClick={(event) => {
+          onInteraction?.({
+            kind: "button_activated",
+            target: "finale-open",
+            input: inputMethod(event),
+          });
+          setError("");
+          setFinaleOpen(true);
+        }}
         disabled={!complete || sending || sent}
         aria-busy={sending}
-        aria-describedby="submission-explanation"
       >
         {sent ? <CheckCheck size={18} /> : <Send size={18} />}
         {sending
@@ -106,7 +149,21 @@ export function SubmitWishes({ answers, note, sentSummary, onSent }: Props) {
             ? "Ihre Änderungen werden erst beim erneuten Senden geteilt."
             : ""}
       </p>
-      {error && (
+      {finaleOpen && (
+        <VisitFinale
+          onInteraction={onInteraction}
+          choice={visitChoice}
+          onChoose={(choice) => {
+            setVisitChoice(choice);
+            onVisitChoice?.(choice);
+          }}
+          onClose={() => setFinaleOpen(false)}
+          onSend={submit}
+          sending={sending}
+          error={error}
+        />
+      )}
+      {!finaleOpen && error && (
         <p className="submission-error" role="alert">
           {error}
         </p>

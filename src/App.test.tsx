@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import App from "./App";
+import { readDraft, saveDraft } from "./draft";
 import { questions } from "./questions";
 
 beforeEach(() => {
@@ -88,4 +89,30 @@ describe("birthday questionnaire", () => {
         .some((radio) => (radio as HTMLInputElement).checked),
     ).toBe(false);
   });
+});
+
+it("records rendered popups locally even when the final answer changes", async () => {
+  const user = userEvent.setup();
+  const fetch = vi.fn();
+  vi.stubGlobal("fetch", fetch);
+  saveDraft({
+    answers: Object.fromEntries(questions.map((q) => [q.id, q.options[0].id])),
+    note: "",
+    step: questions.findIndex((q) => q.id === "season") + 2,
+    sentSummary: "",
+  });
+  render(<App />);
+  await user.click(
+    screen.getByRole("radio", { name: /Ich stehe den Jahreszeiten/ }),
+  );
+  expect(
+    screen.getByText("Ich erinnere mich, das haben Sie einmal gesagt."),
+  ).toBeTruthy();
+  await user.click(screen.getByRole("button", { name: "Hinweis schließen" }));
+  await user.click(screen.getByRole("radio", { name: /^Herbst/ }));
+  await user.click(screen.getByRole("button", { name: "Hinweis schließen" }));
+  await user.click(screen.getByRole("radio", { name: /^Frühling/ }));
+  expect(readDraft().answers.season).toBe("spring");
+  expect(readDraft().shownPopups).toEqual(["season:neutral", "season:autumn"]);
+  expect(fetch).not.toHaveBeenCalled();
 });

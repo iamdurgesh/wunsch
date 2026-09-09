@@ -1,20 +1,27 @@
-import type { D1Database } from "@cloudflare/workers-types";
 import {
-  buildSummary,
-  isValidAnswers,
-  questionnaireVersion,
-} from "../src/questions";
+  interactionSummary,
+  isValidInteractionLog,
+  readableInteractions,
+} from "../src/interactions";
+import { isVisitChoice, type VisitChoice } from "../src/visit-plan";
+import {
+  buildSubmissionSummary,
+  isValidShownPopups,
+  readableAnswers,
+} from "../src/submission-details";
+import type { D1Database, RateLimit } from "@cloudflare/workers-types";
+import { apiHeaders as headers } from "./security";
+import { isValidAnswers, questionnaireVersion } from "../src/questions";
 
-export type Env = { DB?: D1Database; INVITE_TOKEN?: string };
-const headers = {
-  "Content-Type": "application/json; charset=utf-8",
-  "Cache-Control": "no-store",
-  "X-Content-Type-Options": "nosniff",
-  "Referrer-Policy": "no-referrer",
+export type Env = {
+  DB?: D1Database;
+  INVITE_TOKEN?: string;
+  SUBMISSION_LIMITER?: RateLimit;
+  WRITE_LIMITER?: RateLimit;
 };
 const json = (body: object, status = 200) =>
   new Response(JSON.stringify(body), { status, headers });
-const MAX_BODY_BYTES = 16_384;
+export const MAX_BODY_BYTES = 512 * 1024;
 
 async function digest(value: string) {
   return new Uint8Array(
@@ -56,6 +63,9 @@ export async function handleWishes(
     });
   if (request.headers.get("Origin") !== new URL(request.url).origin)
     return json({ error: "Forbidden" }, 403);
+  const fetchSite = request.headers.get("Sec-Fetch-Site");
+  if (fetchSite && fetchSite !== "same-origin")
+    return json({ error: "Forbidden" }, 403);
   if (!env.DB) return json({ error: "Not configured" }, 503);
   const submissionKey = request.headers.get("X-Submission-Key");
   let identity: Uint8Array;
@@ -86,6 +96,28 @@ export async function handleWishes(
   if (Number(request.headers.get("Content-Length")) > MAX_BODY_BYTES)
     return json({ error: "Too large" }, 413);
 
+  // Both limits are required: rotating client keys must not bypass the write budget.
+  if (!env.SUBMISSION_LIMITER || !env.WRITE_LIMITER)
+    return json({ error: "Not configured" }, 503);
+  try {
+    const key = Array.from(identity, (byte) =>
+      byte.toString(16).padStart(2, "0"),
+    ).join("");
+    const client = await env.SUBMISSION_LIMITER.limit({
+      key: `wunsch:client:${key}`,
+    });
+    const budget = client.success
+      ? await env.WRITE_LIMITER.limit({ key: "wunsch:all-submissions" })
+      : { success: false };
+    if (!client.success || !budget.success)
+      return new Response(JSON.stringify({ error: "Too many submissions" }), {
+        status: 429,
+        headers: { ...headers, "Retry-After": "60" },
+      });
+  } catch {
+    return json({ error: "Temporarily unavailable" }, 503);
+  }
+
   let body: unknown;
   try {
     body = await readBody(request);
@@ -102,9 +134,19 @@ export async function handleWishes(
     payload.version !== questionnaireVersion ||
     !isValidAnswers(payload.answers, true) ||
     typeof payload.note !== "string" ||
-    payload.note.length > 500
+    payload.note.length > 500 ||
+    (payload.interactionLog !== undefined &&
+      !isValidInteractionLog(payload.interactionLog)) ||
+    (payload.visitChoice !== undefined &&
+      !isVisitChoice(payload.visitChoice)) ||
+    (payload.shownPopups !== undefined &&
+      !isValidShownPopups(payload.shownPopups))
   )
     return json({ error: "Invalid answers" }, 400);
+
+  const interactionLog = isValidInteractionLog(payload.interactionLog)
+    ? payload.interactionLog
+    : undefined;
 
   // One row per browser submission (or legacy invitation), including retries and edits.
   const invitationId = Array.from(identity, (byte) =>
@@ -112,17 +154,38 @@ export async function handleWishes(
   ).join("");
   try {
     await env.DB.prepare(
-      `INSERT INTO wishes (invitation_id, answers_json, note, summary, updated_at)
-      VALUES (?, ?, ?, ?, ?)
+      `INSERT INTO wishes (invitation_id, answers_json, note, summary, updated_at, interaction_log_json, interaction_summary)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(invitation_id) DO UPDATE SET answers_json = excluded.answers_json,
-        note = excluded.note, summary = excluded.summary, updated_at = excluded.updated_at`,
+        note = excluded.note, summary = excluded.summary, updated_at = excluded.updated_at,
+        interaction_log_json = excluded.interaction_log_json, interaction_summary = excluded.interaction_summary`,
     )
       .bind(
         invitationId,
-        JSON.stringify(payload.answers),
+        JSON.stringify(
+          readableAnswers(
+            payload.answers,
+            payload.shownPopups as string[] | undefined,
+            payload.visitChoice as VisitChoice | undefined,
+          ),
+        ),
         payload.note.trim(),
-        buildSummary(payload.answers, payload.note),
+        buildSubmissionSummary(
+          payload.answers,
+          payload.note,
+          payload.shownPopups as string[] | undefined,
+          payload.visitChoice as VisitChoice | undefined,
+        ),
         new Date().toISOString(),
+        interactionLog
+          ? JSON.stringify({
+              Ereignisse: readableInteractions(interactionLog),
+              Nicht_aufgezeichnet: interactionLog.omitted,
+            })
+          : null,
+        interactionLog
+          ? interactionSummary(interactionLog)
+          : "Nicht erfasst (ältere Version).",
       )
       .run();
     return json({ saved: true });

@@ -1,3 +1,6 @@
+import { isValidInteractionLog, type InteractionLog } from "./interactions";
+import { isVisitChoice, type VisitChoice } from "./visit-plan";
+import { isValidShownPopups } from "./submission-details";
 import {
   isValidAnswers,
   questionnaireVersion,
@@ -14,6 +17,9 @@ export type Draft = {
   note: string;
   step: number;
   sentSummary: string;
+  shownPopups?: string[];
+  visitChoice?: VisitChoice;
+  interactionLog?: InteractionLog;
 };
 export const emptyDraft = (): Draft => ({
   answers: {},
@@ -40,6 +46,11 @@ export function readDraft(): Draft {
       !Number.isFinite(value.savedAt) ||
       Date.now() - value.savedAt > MAX_AGE ||
       !isValidAnswers(value.answers) ||
+      (value.interactionLog !== undefined &&
+        !isValidInteractionLog(value.interactionLog)) ||
+      (value.visitChoice !== undefined && !isVisitChoice(value.visitChoice)) ||
+      (value.shownPopups !== undefined &&
+        !isValidShownPopups(value.shownPopups)) ||
       typeof value.note !== "string" ||
       value.note.length > 500 ||
       typeof value.sentSummary !== "string" ||
@@ -56,6 +67,15 @@ export function readDraft(): Draft {
       note: value.note,
       step: Math.max(0, Math.min(value.step, maxStep)),
       sentSummary: value.sentSummary,
+      ...(value.interactionLog !== undefined
+        ? { interactionLog: value.interactionLog }
+        : {}),
+      ...(value.visitChoice !== undefined
+        ? { visitChoice: value.visitChoice }
+        : {}),
+      ...(value.shownPopups !== undefined
+        ? { shownPopups: value.shownPopups }
+        : {}),
     };
   } catch {
     return emptyDraft();

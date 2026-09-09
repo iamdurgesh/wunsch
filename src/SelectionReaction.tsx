@@ -1,3 +1,5 @@
+import type { RecordInteraction } from "./interactions";
+import { useDisplayEvent } from "./use-display-event";
 import { useEffect, useState, type CSSProperties } from "react";
 import { answerIncludes, type Answer, type Question } from "./questions";
 import "./selection-reaction.css";
@@ -5,14 +7,36 @@ import "./selection-reaction.css";
 export function SelectionReaction({
   reaction,
   answer,
+  onShown,
+  interactionTarget,
+  onInteraction,
 }: {
   reaction: Question["reaction"];
   answer?: Answer;
+  onShown?: () => void;
+  interactionTarget?: string;
+  onInteraction?: RecordInteraction;
 }) {
   const [dismissed, setDismissed] = useState(false);
   const [effectFinished, setEffectFinished] = useState(false);
   const active =
     !dismissed && reaction && answerIncludes(answer, reaction.optionId);
+
+  useDisplayEvent(
+    active ? interactionTarget : undefined,
+    "popup_opened",
+    onInteraction,
+  );
+
+  useEffect(() => {
+    if (!active) return;
+    const report = () => {
+      if (document.visibilityState !== "hidden") onShown?.();
+    };
+    report();
+    document.addEventListener("visibilitychange", report);
+    return () => document.removeEventListener("visibilitychange", report);
+  }, [active, onShown]);
 
   useEffect(() => {
     if (!active || !reaction.screenEmoji) return;
@@ -59,7 +83,14 @@ export function SelectionReaction({
             <button
               className="reaction-close"
               aria-label="Hinweis schließen"
-              onClick={() => setDismissed(true)}
+              onClick={() => {
+                if (interactionTarget)
+                  onInteraction?.({
+                    kind: "popup_closed",
+                    target: interactionTarget,
+                  });
+                setDismissed(true);
+              }}
             >
               ×
             </button>

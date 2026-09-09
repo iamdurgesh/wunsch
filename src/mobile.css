@@ -1,4 +1,12 @@
 /* Phone refinements, loaded after the stationery theme. */
+.card-top-navigation {
+  padding: 12px 24px 0;
+}
+.card-top-navigation .back-button {
+  min-height: 44px;
+  font-size: 17px;
+  gap: 8px;
+}
 @media (max-width: 700px) {
   /* Keep the paper layers inside the viewport even for long summaries. */
   .card-stack::before {

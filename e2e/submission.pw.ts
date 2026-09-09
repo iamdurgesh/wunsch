@@ -33,13 +33,19 @@ test("local Cloudflare saves wishes and acknowledges receipt on mobile", async (
   await page
     .getByRole("button", { name: "Ab die Post, Wunschzettel!", exact: true })
     .click();
+  await page.getByRole("button", { name: /Jaaaa!/ }).click();
+  await page.getByRole("button", { name: "Jetzt alles abschicken!" }).click();
   await expect(
     page.getByRole("button", { name: "Wünsche sind angekommen" }),
   ).toBeDisabled();
   await page
     .getByRole("textbox", { name: /Herzenswunsch/ })
     .fill("LOCAL TEST: Aktualisierter Wunsch.");
-  await page.getByRole("button", { name: "Nachschlag für die Geschenkabteilung!" }).click();
+  await page
+    .getByRole("button", { name: "Nachschlag für die Geschenkabteilung!" })
+    .click();
+  await page.getByRole("button", { name: /Jaaaa!/ }).click();
+  await page.getByRole("button", { name: "Jetzt alles abschicken!" }).click();
   await expect(
     page.getByRole("button", { name: "Wünsche sind angekommen" }),
   ).toBeDisabled();
