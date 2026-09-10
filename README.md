@@ -25,14 +25,14 @@ npm run deploy:check # Bundle the Worker without uploading or deploying
 
 ### Local database and submissions
 
-Copy `.dev.vars.example` to `.dev.vars`, generate a token with `openssl rand -hex 32`, and set `INVITE_TOKEN` to that value. `.dev.vars` is ignored by Git. Never put this secret in a `VITE_` environment variable.
+No invitation token is required. Use the local D1 emulator:
 
 ```sh
 npm run db:migrate:local
 npm run dev:full
 ```
 
-Open `http://127.0.0.1:8788/#invite=YOUR_LOCAL_TOKEN`. The fragment is read locally, removed from the address bar, and retained in tab session storage. It is sent to the API in a request header only when Frau Inge presses the send button. Do not share your production invitation key with anyone except the intended recipient.
+Open `http://127.0.0.1:8788/`. The initial send button opens the visit invitation. Only **Jetzt alles abschicken!** sends answers, the visit choice and interaction history to the API.
 
 ```sh
 npm run db:results:local
@@ -40,13 +40,13 @@ npm run db:results:local
 
 With `npm run dev:full` running, `npm run test:api:local` checks real submissions through the mobile UI. It writes clearly marked synthetic results to the local database only. `npm run test:mobile` skips that optional integration check and tests the responsive frontend.
 
-These commands use a local D1 emulator. No Cloudflare account or remote database is required. The placeholder database ID in `wrangler.jsonc` is deliberately local-only and must be replaced before deployment.
+These commands use a local D1 emulator. No Cloudflare account or remote database is required. The database binding in `wrangler.jsonc` points to production; local commands still use the local D1 emulator unless `--remote` is passed.
 
 ## Add your questions
 
 Edit `src/questions.ts`. Each question has a stable, unique `id`, category, title, description and two or more options. Each option needs a unique `id` within that question. Progress, navigation and the summary adapt to the number of questions automatically.
 
-The fitness question comes from the original brief. The other two questions are examples to replace or extend. Questions currently use single-choice answers. The result presents Frau Inge’s actual answers without inferring product recommendations.
+The current seven questions cover fitness, colours, seasons, small pleasures, gift preferences, gift value, and cleaning. Herbst currently triggers the shared-preference card as an example; change the season question’s `reaction.optionId` when the inviter confirms their favourite. The reusable `SelectionReaction` component reads its copy from the question configuration. Most questions use single-choice answers; shared time permits one additional gift preference. The result presents Frau Inge’s actual answers without inferring product recommendations.
 
 ```ts
 {
@@ -86,53 +86,78 @@ Images and fonts are served locally. The production Content Security Policy perm
 - `src/draft.ts`: validated, versioned tab-session drafts; no localStorage.
 - `src/SubmitWishes.tsx`: explicit submission, retry, and confirmed-save states.
 - `worker/index.ts`: Worker entry point; routes API requests and serves frontend assets.
-- `worker/wishes.ts`: write-only endpoint, invitation validation and prepared database statements.
-- `migrations/0001_wishes.sql`: one result per invitation, with a readable summary.
+- `worker/wishes.ts`: write-only endpoint, validated submissions, hashed browser submission keys, and prepared database statements.
+- `migrations/`: result storage and the additive interaction-history migration.
 - `public/_headers`: security headers for Cloudflare static assets.
 
 Native radio inputs provide keyboard navigation. Navigation moves focus to the new heading and scrolls back to the card. Answers, notes, current step and confirmed-save status survive reloads in the same browser tab through sessionStorage. Drafts older than 24 hours are discarded on the next load. The questionnaire still works in memory if storage is blocked. Browsers may restore session storage when restoring closed tabs; this is not a guaranteed secure-erasure mechanism.
 
-Answers are sent only after pressing **Wünsche senden**. Success appears only after the API acknowledges a database write. Retries and later edits replace the same invitation’s result; they do not create duplicate rows. The app stores a snapshot of the readable summary so it remains meaningful if question wording changes later. The final screen uses direct submission only; without an invitation, it explains how to request the personal link.
+Answers are sent only after **Jetzt alles abschicken!** in the finale. Success appears only after the API acknowledges a database write. A random key in tab session storage makes retries and later edits update the same row. Different browser keys cannot overwrite each other's results. No invitation link is required; the endpoint accepts completed public submissions and is not proof of respondent identity.
+
+The local draft also records timestamped page displays, option activations (including repeat taps), answer changes, popup opens/closes, and finale actions. The event sequence survives reloads in the same tab. No keystroke contents, pointer coordinates, IP addresses, or device fingerprints are collected. The free-text field is saved only as its final submitted value. Repeated displays are recorded independently; React StrictMode does not duplicate them. Displays in hidden tabs wait until the tab becomes visible. Displayed does not mean demonstrably read.
+
+A maximum of 2,000 events is retained per draft; any excess is explicitly reported as an omitted count. Requests are limited to 512 KiB. This is a bounded local interaction history, uploaded with the final submission, not a live analytics stream. An abandoned form sends nothing.
 
 ## Deploy with Cloudflare Workers Builds
 
-| Setting | Value |
-| --- | --- |
-| Build command | `npm run build` |
+Live app: https://wunsch.app-pilot.workers.dev
+
+The public URL is ready to share without a token. Older invitation-based clients remain compatible, but new clients use their own random submission keys.
+
+For subsequent local deployments: `npm run build && npx wrangler deploy --env-file .env.cloudflare.local`.
+
+| Setting        | Value                 |
+| -------------- | --------------------- |
+| Build command  | `npm run build`       |
 | Deploy command | `npx wrangler deploy` |
-| Root directory | Repository root |
-| Node version | `22` |
+| Root directory | Repository root       |
+| Node version   | `22`                  |
 
 Connect the repository to your existing Cloudflare Worker with these settings. `wrangler.jsonc` specifies both `worker/index.ts` and the built frontend in `dist`. API routes run through the Worker before static assets; other requests use Cloudflare’s asset serving. The Worker `name` in `wrangler.jsonc` must match the project name in the Cloudflare dashboard.
 
 The project was initially configured for Pages. A Workers Build running `npx wrangler deploy` against `pages_build_output_dir` fails with **Missing entry-point to Worker script or to assets directory**. The configuration now targets Workers directly. Deploying only `dist` as static assets would omit the answer-saving API.
 
-Before deploying:
+Production migration 0002 was applied and verified on 9 September 2026. For a fresh database, or to apply future pending migrations, run the migration command before deploying (already-applied migrations are skipped):
 
-1. Create a D1 database with an EU jurisdiction: `npx wrangler d1 create inge-wishes --jurisdiction=eu`.
-2. Put its real database name and ID in `wrangler.jsonc`. Keep the `DB` binding name. Use a separate database and invitation token for any shared preview environment. The existing placeholder ID cannot be used for a remote deployment.
-3. Apply the production migration: `npx wrangler d1 migrations apply inge-wishes --remote`.
-4. Generate a fresh 64-character hex token and add it as the **INVITE_TOKEN** runtime secret under the Worker’s Settings → Variables and Secrets. Do not reuse a test token, put it in build-time variables, or commit it to Git.
-5. Push the configuration to the connected repository and trigger the build, or run `npm run deploy` locally after `npx wrangler login`.
-6. Send Frau Inge `https://YOUR_WORKER.YOUR_SUBDOMAIN.workers.dev/#invite=YOUR_PRODUCTION_TOKEN` privately, or use your configured custom domain.
+```sh
+npx wrangler d1 migrations apply inge-wishes --remote --env-file .env.cloudflare.local
+npm run build
+npx wrangler deploy --env-file .env.cloudflare.local
+```
 
-No remote database has been created or connected by this implementation, and no deployment has been performed.
+`wrangler.jsonc` binds `DB` to `inge-wishes` (`78d1b51a-0eed-4a9d-8922-a170bd84c768`). Account selection is in the Git-ignored `.env.cloudflare.local`. The migration adds two nullable columns and preserves existing rows. Apply it **before** deploying: the new save statement requires those columns. The production migration was applied with user authorization; deployment remains a manual step. No wish entries were deleted.
+
+The initial production schema check identified missing migration 0002 as the submission blocker. After applying it, a second read-only check confirmed both interaction-history columns are present. See [SECURITY_REVIEW.md](SECURITY_REVIEW.md) for the confirmed submission failure, fixes, validation and release steps. Database jurisdiction and account-wide settings are separate deployment checks.
 
 ### See Frau Inge’s results
 
 Sign in to your Cloudflare account, open **D1 → inge-wishes → Console**, and run:
 
 ```sql
-SELECT summary, updated_at FROM wishes ORDER BY updated_at DESC;
+SELECT summary, interaction_summary, updated_at FROM wishes ORDER BY updated_at DESC;
 ```
 
-Only your authenticated Cloudflare account has this read path; the app provides no public results API. Anyone holding the invitation link can submit or replace that invitation’s result, so keep it private. This is a personal invitation, not proof of the respondent’s identity.
+Only your authenticated Cloudflare account has this read path; the app provides no public results API.
 
-After the birthday, remove the invitation secret to stop submissions. Delete stored wishes when no longer needed, or when requested, through the D1 console. For example, inspect and then delete a specific row using its `invitation_id`. Database backups and provider logs have their own retention settings; this implementation does not schedule automatic deletion.
+- `answers_json`: German questions, final answers and popup summaries.
+- `summary`: readable answer/visit summary.
+- `interaction_log_json`: each event in order, browser UTC time, action, readable target, input method when available, and answer state after a change.
+- `interaction_summary`: the same history as readable text. This is the authoritative record of repeated popup openings and changed finale choices.
+- `updated_at`: server timestamp of the acknowledged save.
+
+Older rows have no event history; none is inferred or backfilled. Failed sends can be retried with the same key. All answers and the history update in one SQL statement.
+
+Delete stored wishes when no longer needed through the D1 console. Backups and provider logs have their own retention settings. No automatic deletion is configured.
 
 [Workers Builds configuration](https://developers.cloudflare.com/workers/ci-cd/builds/configuration/)
 [Migration from Pages](https://developers.cloudflare.com/workers/static-assets/migration-guides/migrate-from-pages/) · [D1 EU jurisdiction](https://developers.cloudflare.com/d1/configuration/data-location/)
 
 ## Data handling
 
-Unsent answers stay in tab session storage. Explicitly submitted answer IDs, optional free text, a readable summary, an invitation hash and an update timestamp are stored in D1. The app does not record IP addresses, collect health measurements, use analytics, load external fonts or run an AI model. The hosting provider still handles HTTP requests and may retain its own logs. The in-app notice describes the submission and asks Frau Inge to contact the inviter for deletion. Hosting privacy information, the responsible person’s details and retention arrangements must reflect the actual deployment. EU D1 storage alone is not a claim that the whole service meets every GDPR requirement.
+Unsent answers and interaction history stay in tab session storage. The privacy details in the app explain that the final send also includes the selection/popup history. Submitted answers, optional free text, visit choice, readable summaries, interaction history, a hashed browser key and an update timestamp are stored in D1. No external analytics, fonts, or AI models are used. The hosting provider handles HTTP requests and may retain its own logs. This implementation does not claim overall GDPR compliance based on the database location alone.
+
+## Submission protection
+
+The Worker requires the two rate-limit bindings in `wrangler.jsonc`: 10 attempts per browser submission key per 60 seconds and a shared 60-attempt budget. Missing or unavailable limiters fail closed; HTTP 429 includes a 60-second retry hint. These are approximate Cloudflare-location limits, not a strict worldwide quota or proof of respondent identity. Neither limiter stores IP addresses in D1.
+
+The development-tool dependency `sharp` is pinned to 0.35.4 through `overrides` to fix GHSA-rgj7-g3m4-5g8c. Keep the override until the upstream dependency chain includes a patched version, and verify with `npm audit` before removing it.
