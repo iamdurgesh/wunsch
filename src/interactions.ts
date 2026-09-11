@@ -1,5 +1,5 @@
 import { questions, type Answer } from "./questions";
-import { visitFinalMessage, visitOptions, visitQuestion } from "./visit-plan";
+import { visitFinalMessage, recordedVisitOptions, visitQuestion } from "./visit-plan";
 
 export const MAX_INTERACTIONS = 2000;
 export type InputMethod = "mouse" | "touch" | "pen" | "keyboard" | "unknown";
@@ -36,7 +36,7 @@ const options = Object.fromEntries([
       `${question.title} → ${option.label}`,
     ]),
   ),
-  ...visitOptions.map((option) => [
+  ...recordedVisitOptions.map((option) => [
     `visit:${option.id}`,
     `${visitQuestion} → ${option.label}`,
   ]),
@@ -52,7 +52,7 @@ const popups = Object.fromEntries([
     ]),
   ),
   ["visit:invitation", `🥳 Juhuuu! ${visitQuestion}`],
-  ...visitOptions.map((option) => {
+  ...recordedVisitOptions.map((option) => {
     const message = visitFinalMessage(option.id);
     return [
       `visit:${option.id}`,
@@ -62,9 +62,9 @@ const popups = Object.fromEntries([
 ]);
 const buttons: Record<string, string> = {
   back: "Zurück zur vorherigen Frage / zum vorherigen Schritt",
-  "finale-open": "Ab die Post, Wunschzettel! / Nachschlag",
+  "finale-open": "Optionale Einladung ansehen (frühere Version: Wunschzettel-Finale öffnen)",
   "visit-change": "Besuchswunsch ändern",
-  send: "Jetzt alles abschicken!",
+  send: "Wunschzettel oder optionale Besuchsantwort senden",
 };
 const labels: Record<Interaction["kind"], string> = {
   screen_opened: "Seite angezeigt",
@@ -133,7 +133,7 @@ export function isValidInteractionLog(value: unknown): value is InteractionLog {
       if (event.kind !== "answer_changed") return event.selected === undefined;
       const allowed =
         event.target === "visit"
-          ? visitOptions
+          ? recordedVisitOptions
           : questions.find((q) => q.id === event.target)!.options;
       const maximum = event.target === "gift-style" ? 2 : 1;
       return (
@@ -173,7 +173,7 @@ export function readableInteractions(log: InteractionLog) {
           "Antwort danach": event.selected.map((id) => {
             const choices =
               event.target === "visit"
-                ? visitOptions
+                ? recordedVisitOptions
                 : questions.find((q) => q.id === event.target)!.options;
             return choices.find((option) => option.id === id)!.label;
           }),

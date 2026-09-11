@@ -89,16 +89,16 @@ test("touch selections, repeated popups, changed finale and final-send history s
       .tap();
   await page.getByRole("button", { name: "Zu meinen Wünschen" }).tap();
   await page.getByRole("button", { name: "Ab die Post, Wunschzettel!" }).tap();
-  await page.getByRole("button", { name: /Jaaaa!/ }).tap();
+  await page.getByRole("button", { name: /Ja!/ }).tap();
   await page.getByRole("button", { name: "Besuchswunsch ändern" }).tap();
   await page.getByRole("button", { name: /Ein anderes Wochenende/ }).tap();
-  expect(sent).toHaveLength(0);
-  await page.getByRole("button", { name: "Jetzt alles abschicken!" }).tap();
+  expect(sent).toHaveLength(1);
+  await page.getByRole("button", { name: "Besuchsantwort senden" }).tap();
   await expect(
     page.getByRole("button", { name: "Wünsche sind angekommen" }),
   ).toBeDisabled();
-  expect(sent).toHaveLength(1);
-  const events = sent[0].interactionLog.events;
+  expect(sent).toHaveLength(2);
+  const events = sent[1].interactionLog.events;
   expect(
     events.filter(
       (event) =>
@@ -107,8 +107,7 @@ test("touch selections, repeated popups, changed finale and final-send history s
   ).toHaveLength(2);
   expect(
     events.some(
-      (event) =>
-        event.kind === "popup_opened" && event.target === "visit:big-yes",
+      (event) => event.kind === "popup_opened" && event.target === "visit:yes",
     ),
   ).toBe(true);
   expect(
@@ -122,6 +121,6 @@ test("touch selections, repeated popups, changed finale and final-send history s
     target: "send",
     input: "touch",
   });
-  expect(sent[0].visitChoice).toBe("later");
+  expect(sent[1].visitChoice).toBe("later");
   await context.close();
 });

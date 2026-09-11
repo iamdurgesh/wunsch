@@ -644,9 +644,11 @@ function App() {
             Ihr Entwurf wird in diesem Browser-Tab zwischengespeichert, damit er
             beim Neuladen erhalten bleibt. Nach 24 Stunden ohne Nutzung wird er
             nicht wiederhergestellt. Erst wenn Sie den Wunschzettel absenden,
-            speichern Sie Ihre Antworten, Ihren Freitext, Ihren Besuchswunsch
+            speichern Sie Ihre Antworten, Ihren Freitext
             und den Verlauf Ihrer Auswahl und der angezeigten Popups bei
-            Cloudflare für die Person, die Sie eingeladen hat. Zum Löschen
+            Cloudflare für die Person, die Sie eingeladen hat. Die anschließende
+            Besuchseinladung ist freiwillig. Erst mit „Besuchsantwort senden“
+            ergänzen Sie Ihre Besuchsantwort und den weiteren Verlauf. Zum Löschen
             gesendeter Wünsche wenden Sie sich bitte an diese Person. Die App
             lädt keine externen Analyse-Tools oder Schriften.
           </p>

@@ -1,6 +1,6 @@
 import {
   visitFinalMessage,
-  visitOptions,
+  recordedVisitOptions,
   visitQuestion,
   type VisitChoice,
 } from "./visit-plan";
@@ -60,7 +60,9 @@ export function readableAnswers(
             })),
   }));
   if (visitChoice) {
-    const option = visitOptions.find((option) => option.id === visitChoice)!;
+    const option = recordedVisitOptions.find(
+      (option) => option.id === visitChoice,
+    )!;
     const message = visitFinalMessage(visitChoice);
     rows.push({
       Frage: visitQuestion,
@@ -102,7 +104,7 @@ export function buildSubmissionSummary(
         ? displays.join("\n\n")
         : "Keine Popups angezeigt.";
   const visit = visitChoice
-    ? `\n\n${visitQuestion}\n${visitOptions.find((option) => option.id === visitChoice)!.label}`
+    ? `\n\n${visitQuestion}\n${recordedVisitOptions.find((option) => option.id === visitChoice)!.label}`
     : "";
   return `${buildSummary(answers, note)}${visit}\n\nAngezeigte Popups (vom Browser gemeldet, auch bei später geänderter Antwort):\n${status}`;
 }
