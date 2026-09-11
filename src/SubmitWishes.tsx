@@ -5,6 +5,7 @@ import {
   type RecordInteraction,
 } from "./interactions";
 import { VisitFinale } from "./VisitFinale";
+import { SubmissionSuccess } from "./SubmissionSuccess";
 import { type VisitChoice } from "./visit-plan";
 import { buildSubmissionSummary } from "./submission-details";
 import { useRef, useState } from "react";
@@ -43,6 +44,7 @@ export function SubmitWishes({
   const [visitChoice, setVisitChoice] = useState<VisitChoice | undefined>(
     initialVisitChoice,
   );
+  const [savedVisitChoice, setSavedVisitChoice] = useState(initialVisitChoice);
   const [finaleOpen, setFinaleOpen] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
@@ -52,13 +54,15 @@ export function SubmitWishes({
     answers,
     note,
     shownPopups,
-    visitChoice,
+    savedVisitChoice,
   );
   const sent = sentSummary === summary;
   const complete = isValidAnswers(answers, true) && note.length <= 500;
 
-  async function submit(input: InputMethod = "unknown") {
-    if (!complete || !visitChoice || inFlight.current || sent) return;
+  async function submit(input: InputMethod = "unknown", visitUpdate = false) {
+    if (!complete || inFlight.current || (!visitUpdate && sent)) return;
+    if (visitUpdate && !visitChoice) return;
+    const submittedChoice = visitUpdate ? visitChoice : savedVisitChoice;
     onInteraction?.({ kind: "button_activated", target: "send", input });
     const interactionLog = getInteractionLog?.();
     inFlight.current = true;
@@ -97,7 +101,7 @@ export function SubmitWishes({
           answers,
           note,
           shownPopups,
-          visitChoice,
+          visitChoice: submittedChoice,
           interactionLog,
           version: questionnaireVersion,
         }),
@@ -114,8 +118,12 @@ export function SubmitWishes({
         );
         return;
       }
-      onSent(summary);
-      setFinaleOpen(false);
+      setSavedVisitChoice(submittedChoice);
+      if (submittedChoice) onVisitChoice?.(submittedChoice);
+      onSent(
+        buildSubmissionSummary(answers, note, shownPopups, submittedChoice),
+      );
+      setFinaleOpen(!visitUpdate);
     } catch {
       setError(retryMessage);
     } finally {
@@ -129,13 +137,7 @@ export function SubmitWishes({
       <button
         className="primary-button"
         onClick={(event) => {
-          onInteraction?.({
-            kind: "button_activated",
-            target: "finale-open",
-            input: inputMethod(event),
-          });
-          setError("");
-          setFinaleOpen(true);
+          void submit(inputMethod(event));
         }}
         disabled={!complete || sending || sent}
         aria-busy={sending}
@@ -149,23 +151,39 @@ export function SubmitWishes({
               ? "Nachschlag für die Geschenkabteilung!"
               : "Ab die Post, Wunschzettel!"}
       </button>
+      {sent && !finaleOpen && <SubmissionSuccess />}
       <p className="submission-status" role="status">
-        {sent
-          ? "Gespeichert! Jetzt darf die Vorfreude übernehmen."
-          : sentSummary
-            ? "Ihre Änderungen werden erst beim erneuten Senden geteilt."
-            : ""}
+        {!sent && sentSummary
+          ? "Ihre Änderungen werden erst beim erneuten Senden geteilt."
+          : ""}
       </p>
+      {sent && !finaleOpen && (
+        <button
+          className="visit-back"
+          onClick={() => {
+            onInteraction?.({
+              kind: "button_activated",
+              target: "finale-open",
+            });
+            setFinaleOpen(true);
+          }}
+        >
+          Optionale Einladung ansehen
+        </button>
+      )}
       {finaleOpen && (
         <VisitFinale
           onInteraction={onInteraction}
           choice={visitChoice}
           onChoose={(choice) => {
             setVisitChoice(choice);
-            onVisitChoice?.(choice);
           }}
-          onClose={() => setFinaleOpen(false)}
-          onSend={submit}
+          onClose={() => {
+            setFinaleOpen(false);
+            setVisitChoice(savedVisitChoice);
+            setError("");
+          }}
+          onSend={(input) => submit(input, true)}
           sending={sending}
           error={error}
         />

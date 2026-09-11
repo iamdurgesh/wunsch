@@ -6,9 +6,11 @@ import {
 import { useDisplayEvent } from "./use-display-event";
 import { useEffect, useRef, useState } from "react";
 import { Send } from "lucide-react";
+import { SubmissionSuccess } from "./SubmissionSuccess";
 import {
   visitFinalMessage,
   visitOptions,
+  recordedVisitOptions,
   visitQuestion,
   type VisitChoice,
 } from "./visit-plan";
@@ -79,10 +81,11 @@ export function VisitFinale({
         ×
       </button>
       <div className="visit-content" key={String(confirm)}>
+        <SubmissionSuccess />
         <div className="visit-eyebrow">
           {message
-            ? "DIE VORFREUDE FÄHRT SCHON MAL LOS"
-            : "EINE LETZTE KLEINE ÜBERRASCHUNG"}
+            ? "DANKE FÜR IHRE ANTWORT"
+            : "IHR WUNSCHZETTEL IST GESPEICHERT"}
         </div>
         <div className="visit-hero" aria-hidden="true">
           <span>✦</span>
@@ -98,10 +101,14 @@ export function VisitFinale({
             <div className="visit-ticket">
               <span>IHRE ANTWORT</span>
               <strong>
-                {visitOptions.find((option) => option.id === choice)?.label}
+                {
+                  recordedVisitOptions.find((option) => option.id === choice)
+                    ?.label
+                }
               </strong>
               <small>
-                Wunschzettel + Besuchswunsch. Alles bereit zum Abschicken.
+                Ihr Wunschzettel ist bereits gespeichert. Diese Antwort ist
+                freiwillig.
               </small>
             </div>
             <button
@@ -115,7 +122,7 @@ export function VisitFinale({
               <Send size={20} />
               {sending
                 ? "Die Wunschpost ist unterwegs …"
-                : "Jetzt alles abschicken!"}
+                : "Besuchsantwort senden"}
             </button>
             <button
               className="visit-back"
@@ -139,12 +146,16 @@ export function VisitFinale({
           </>
         ) : (
           <>
+            <p className="visit-copy">
+              Ihre Wünsche sind angekommen! Wenn Sie mögen, gibt es noch eine
+              kleine Einladung. Sie können sie auch einfach schließen.
+            </p>
             <p className="visit-question">{visitQuestion}</p>
             <div className="visit-options">
               {visitOptions.map((option) => (
                 <button
                   key={option.id}
-                  className={`visit-choice${option.id === "big-yes" ? " visit-choice-joy" : ""}`}
+                  className="visit-choice"
                   onClick={(event) => {
                     onInteraction?.({
                       kind: "option_activated",
@@ -170,6 +181,9 @@ export function VisitFinale({
                 </button>
               ))}
             </div>
+            <button className="visit-back" onClick={closePopup}>
+              Für heute fertig
+            </button>
           </>
         )}
       </div>

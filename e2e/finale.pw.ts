@@ -1,22 +1,22 @@
 import { expect, test } from "@playwright/test";
 import { questions, questionnaireVersion } from "../src/questions";
-import { visitOptions } from "../src/visit-plan";
+import { visitOptions, visitFinalMessage } from "../src/visit-plan";
 
 for (const viewport of [
   { width: 320, height: 568 },
   { width: 390, height: 844 },
   { width: 1280, height: 800 },
 ]) {
-  test(`visit finale fits ${viewport.width} and sends only after confirmation`, async ({
-    page,
-  }, testInfo) => {
-    await page.setViewportSize(viewport);
-    const payloads: { visitChoice: string; shownPopups: string[] }[] = [];
-    await page.route("**/api/wishes", async (route) => {
-      payloads.push(route.request().postDataJSON());
-      await route.fulfill({ json: { saved: true } });
-    });
-    for (const option of visitOptions) {
+  for (const option of visitOptions) {
+    test(`visit finale fits ${viewport.width}: ${option.id}, questionnaire first`, async ({
+      page,
+    }, testInfo) => {
+      await page.setViewportSize(viewport);
+      const payloads: { visitChoice: string; shownPopups: string[] }[] = [];
+      await page.route("**/api/wishes", async (route) => {
+        payloads.push(route.request().postDataJSON());
+        await route.fulfill({ json: { saved: true } });
+      });
       await page.goto("/");
       await page.evaluate(
         (draft) =>
@@ -43,7 +43,7 @@ for (const viewport of [
       await expect(
         dialog.getByRole("heading", { name: "Juhuuu!" }),
       ).toBeFocused();
-      expect(payloads.length).toBe(before);
+      expect(payloads.length).toBe(before + 1);
       expect(
         await dialog.evaluate(
           (element) => element.scrollWidth <= element.clientWidth,
@@ -59,13 +59,10 @@ for (const viewport of [
           name: new RegExp(option.label.replace(/[.!]/g, "\\$&")),
         })
         .click();
-      expect(payloads.length).toBe(before);
+      expect(payloads.length).toBe(before + 1);
       await expect(
         dialog.getByRole("heading", {
-          name:
-            option.id === "later"
-              ? "Vorfreude kennt keinen Fahrplan."
-              : "Ich gebe mein Bestes!",
+          name: visitFinalMessage(option.id).headline,
         }),
       ).toBeVisible();
       expect(
@@ -79,12 +76,12 @@ for (const viewport of [
           animations: "disabled",
         });
       await dialog
-        .getByRole("button", { name: "Jetzt alles abschicken!" })
+        .getByRole("button", { name: "Besuchsantwort senden" })
         .click();
       await expect(
         page.getByRole("button", { name: "Wünsche sind angekommen" }),
       ).toBeDisabled();
-      expect(payloads.length).toBe(before + 1);
+      expect(payloads.length).toBe(before + 2);
       expect(payloads.at(-1)).toMatchObject({
         visitChoice: option.id,
         shownPopups: ["season:neutral"],
@@ -93,6 +90,6 @@ for (const viewport of [
       await expect(
         page.getByRole("button", { name: "Wünsche sind angekommen" }),
       ).toBeDisabled();
-    }
-  });
+    });
+  }
 }

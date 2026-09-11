@@ -478,3 +478,33 @@ body {
     padding: 10px 2px;
   }
 }
+
+.submission-success {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: clamp(18px, 4vw, 26px);
+  margin: 18px 0;
+  border: 1px solid #a6c9a1;
+  border-radius: 18px;
+  background: #edf6e9;
+  color: #28552b;
+  text-align: left;
+}
+.submission-success > svg {
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+.submission-success strong {
+  display: block;
+  font-size: clamp(21px, 4vw, 28px);
+  line-height: 1.25;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.submission-success p {
+  margin: 8px 0 0;
+  color: #365c37;
+  font-size: 17px;
+  line-height: 1.5;
+}

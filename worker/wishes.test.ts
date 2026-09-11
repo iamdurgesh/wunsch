@@ -231,7 +231,7 @@ describe("private wish submission", () => {
       previous.close();
     }
   });
-  it.each(["yes", "big-yes", "later"])(
+  it.each(["yes", "big-yes", "later", "open"])(
     "stores the visit choice and finale messages for %s",
     async (visitChoice) => {
       const response = await handleWishes(
@@ -252,14 +252,20 @@ describe("private wish submission", () => {
       expect(saved.at(-1).Frage).toContain("Siegen");
       expect(saved.at(-1)["Angezeigte Popups"]).toHaveLength(2);
       expect(row.summary).toContain(
-        visitChoice === "later"
-          ? "Ein anderes Wochenende passt mir besser."
-          : visitChoice === "yes"
-            ? "Ja!"
-            : "Jaaaa!",
+        visitChoice === "open"
+          ? "Das lasse ich noch offen."
+          : visitChoice === "later"
+            ? "Ein anderes Wochenende passt mir besser."
+            : visitChoice === "yes"
+              ? "Ja!"
+              : "Jaaaa!",
       );
       expect(row.summary).toContain(
-        visitChoice === "later" ? "eine andere Woche" : "Deutsche Bahn",
+        visitChoice === "open"
+          ? "Keine Eile"
+          : visitChoice === "later"
+            ? "Wir lassen den Termin einfach offen."
+            : "Deutsche Bahn",
       );
     },
   );
