@@ -247,58 +247,6 @@ export const questions: readonly Question[] = [
     },
   },
   {
-    id: "gift-value",
-    reactions: [
-      {
-        optionId: "modest",
-        emoji: "🙈",
-        headline: "Bitte wählen Sie das nicht!",
-        caption: " …",
-        large: true,
-      },
-      {
-        optionId: "intention",
-        emoji: "💛",
-        headline: "Sehr schön!",
-        caption: "Ein Geschenk mit Herz – genau darum geht’s.",
-        large: true,
-      },
-    ],
-    category: "Herz oder Preisschild",
-    title: "Darf’s etwas mehr sein – oder bekommt das Preisschild Hausverbot?",
-    description:
-      "Mal ehrlich: Würden Sie sich auch mit einem teureren Geschenk wohlfühlen? Darf ich da etwas großzügiger sein, oder zählt für Sie vor allem der Gedanke dahinter? Ganz ohne Geschenk-Verhör, versprochen.",
-    options: [
-      {
-        id: "comfortable",
-        emoji: "🎁",
-        label: "Ja, das darf auch mal etwas teurer sein.",
-        description:
-          "Wenn es zu mir passt und für Sie im Rahmen bleibt, freue ich mich darüber.",
-      },
-      {
-        id: "modest",
-        emoji: "😅",
-        label: "Lieber etwas Kleines – sonst werde ich verlegen.",
-        description:
-          "Mit einem teuren Geschenk würde ich mich eher unwohl fühlen. Bitte bescheiden bleiben.",
-      },
-      {
-        id: "intention",
-        emoji: "💛",
-        label: "Der Gedanke zählt. Das Preisschild darf draußen warten.",
-        description:
-          "Bitte nichts Teures nur um des Schenkens willen – etwas Persönliches macht mir Freude.",
-      },
-    ],
-    aside: {
-      emoji: "🏷️",
-      headline: "Das Preisschild ist nicht eingeladen.",
-      caption:
-        "Es erzählt sowieso immer nur von sich. Der Gedanke dahinter ist viel sympathischer.",
-    },
-  },
-  {
     id: "cleaning",
     category: "Der liebe Haushalt",
     title: "Haben Sie manchmal genug vom Putzen?",
