@@ -274,7 +274,7 @@ describe("private wish submission", () => {
       answers,
       note: "",
       version: questionnaireVersion,
-      shownPopups: ["season:neutral", "gift-value:modest"],
+      shownPopups: ["season:neutral", "cleaning:fed-up"],
     });
     expect(
       (await handleWishes(incoming, { DB, INVITE_TOKEN: token, ...limiters }))
@@ -292,7 +292,7 @@ describe("private wish submission", () => {
     expect(season["Angezeigte Popups"][0].Nachricht).toContain(
       "Ich erinnere mich, das haben Sie einmal gesagt.",
     );
-    expect(row.summary).toContain("Bitte wählen Sie das nicht!");
+    expect(row.summary).toContain("Da kann ich Ihnen nur zustimmen!");
     expect(row.summary).toContain("auch bei später geänderter Antwort");
   });
   it("distinguishes unrecorded popups from an explicitly empty history", async () => {
@@ -327,11 +327,10 @@ describe("private wish submission", () => {
     expect((await submit("invalid")).status).toBe(400);
     expect(sqlite.prepare("SELECT * FROM wishes").all()).toHaveLength(2);
   });
-  it("stores both gift preferences and the gift-value answer", async () => {
+  it("stores both gift preferences", async () => {
     const selected = {
       ...answers,
       "gift-style": ["together", "useful"],
-      "gift-value": "modest",
     };
     expect(
       (
@@ -348,9 +347,6 @@ describe("private wish submission", () => {
     const row = sqlite.prepare("SELECT summary FROM wishes").get()!;
     expect(row.summary).toContain(
       "Wenn ich es oft benutzen kann. + Wenn wir Zeit zusammen haben.",
-    );
-    expect(row.summary).toContain(
-      "Lieber etwas Kleines – sonst werde ich verlegen.",
     );
   });
   it("stores a readable result and updates the same row on retry or edit", async () => {
