@@ -20,9 +20,7 @@ npm run preview
 npm run test:mobile # Six browser viewport checks (requires Google Chrome)
 npm run deploy:check # Bundle the Worker without uploading or deploying
 ```
-
 `npm run dev` previews the frontend. Use the full local setup below to test sending wishes.
-
 ### Local database and submissions
 
 No invitation token is required. Use the local D1 emulator:
